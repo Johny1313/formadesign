@@ -1,0 +1,35 @@
+FORMA DESIGN 0.6.0
+==================
+
+OBJETIVO
+O FORMA DESIGN agora foi estruturado como WebApp. Depois de publicado no Cloudflare, basta abrir a URL em qualquer dispositivo. A IA faz parte da plataforma e nao depende da maquina do usuario.
+
+ARQUITETURA
+Navegador -> Cloudflare Worker -> FORMA AI Engine -> Workers AI
+                                   |- FLUX.2 Klein 4B
+                                   |- FLUX.1 Schnell (fallback)
+                                   `- GLM-4.7-Flash (materias)
+
+PRIMEIRO DEPLOY
+1. Crie/acesse uma conta Cloudflare.
+2. Nesta pasta, execute DEPLOY_CLOUDFLARE.bat em uma maquina de desenvolvimento com Node.js.
+3. O Wrangler pedira login no Cloudflare uma unica vez.
+4. O deploy devolvera a URL publica do FORMA DESIGN.
+5. A partir dai PC, tablet e celular acessam a mesma aplicacao sem instalar IA.
+
+GITHUB
+A pasta .github/workflows/deploy.yml ja esta preparada.
+No repositorio GitHub, cadastre os secrets:
+- CLOUDFLARE_API_TOKEN
+- CLOUDFLARE_ACCOUNT_ID
+
+Cada push em main fara deploy automatico.
+
+GIPHY
+Para manter a chave fora do frontend, configure no Cloudflare:
+  npx wrangler secret put GIPHY_API_KEY
+
+OBSERVACOES
+- Workers AI nao exige uma API key de modelo no frontend; o Worker usa o binding AI.
+- A conta Cloudflare ainda precisa ter Workers AI habilitado e esta sujeita aos limites/custos da conta.
+- O pacote nao contem credenciais Cloudflare nem GIPHY.

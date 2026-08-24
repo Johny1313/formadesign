@@ -1,0 +1,22 @@
+FORMA DESIGN 0.6.0 - WEBAPP / FORMA AI ENGINE
+Data: 24/08/2026
+
+Mudanca de arquitetura:
+- FORMA DESIGN passa a ser WebApp publicado em Cloudflare Workers + Static Assets
+- IA integrada ao backend da plataforma via Workers AI
+- nenhum ComfyUI, Python, CUDA, PyTorch ou modelo local no dispositivo
+- qualquer dispositivo com navegador pode usar o mesmo editor e o mesmo motor de IA
+
+IA v1:
+- principal: FLUX.2 Klein 4B
+- fallback: FLUX.1 Schnell
+- leitura de materias: GLM-4.7-Flash
+- endpoints internos: /api/ai/status, /api/ai/generate, /api/ai/analyze
+- provider adapter preparado para futuros motores sem alterar a interface
+
+WebApp:
+- preserva redimensionamento lateral dos menus
+- preserva redimensionamento da prancheta pelas margens
+- layout responsivo para desktop, tablet e celular
+- GIPHY passa a poder ser proxyado pelo Worker com secret GIPHY_API_KEY
+- GitHub Actions incluido para deploy automatico
