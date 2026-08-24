@@ -1,0 +1,18 @@
+FORMA DESIGN 0.6.2 - FREE MVP
+
+Objetivo: manter o MVP com custo de infraestrutura de IA em R$ 0.
+
+Motor de imagem: @cf/black-forest-labs/flux-2-klein-4b
+Leitura editorial: @cf/zai-org/glm-4.7-flash
+
+A versão 0.6.2 não utiliza fallback pago. Se a franquia gratuita diária do Workers AI acabar, a interface pausa a geração e informa o limite em vez de acionar cobrança.
+
+Correções principais:
+- removido FLUX.1 Schnell
+- removido seed da interface e da API
+- request de imagem reduzido a prompt + width + height
+- prompts de matérias limitados e normalizados
+- ao usar prompt de matéria, o Melhorar prompt automaticamente é desligado para impedir duplicação
+- apenas uma imagem por pedido para preservar a cota gratuita
+
+Deploy: faça commit destes arquivos no GitHub conectado ao Cloudflare.

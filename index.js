@@ -1,6 +1,7 @@
-const IMAGE_PRIMARY = '@cf/black-forest-labs/flux-2-klein-4b';
-const IMAGE_FALLBACK = '@cf/black-forest-labs/flux-1-schnell';
+const IMAGE_MODEL = '@cf/black-forest-labs/flux-2-klein-4b';
 const TEXT_MODEL = '@cf/zai-org/glm-4.7-flash';
+const ENGINE_VERSION = '0.6.2-free-mvp';
+const BUILD_ID = '062-FREE-20260824';
 
 function json(data, status = 200, headers = {}) {
   return Response.json(data, {
@@ -27,12 +28,6 @@ function normalizeFormat(format = '1:1') {
   return presets[format] || presets['1:1'];
 }
 
-function modelInfo(key) {
-  if (key === 'flux1-schnell') {
-    return { id: IMAGE_FALLBACK, key, label: 'FLUX.1 Schnell' };
-  }
-  return { id: IMAGE_PRIMARY, key: 'flux2-klein', label: 'FLUX.2 Klein 4B' };
-}
 
 async function readJson(request) {
   try {
@@ -46,92 +41,75 @@ function safePrompt(value, max = 2048) {
   return String(value || '').trim().slice(0, max);
 }
 
-function buildImagePrompt(input) {
-  const prompt = safePrompt(input.prompt);
-  const avoid = safePrompt(input.negative, 600);
-  const format = String(input.format || '1:1');
-  if (!prompt) throw new Error('Prompt vazio');
-  const aspectHint = format === '16:9' ? 'wide landscape composition, 16:9 framing' :
-    format === '9:16' ? 'vertical portrait composition, 9:16 framing' :
-    format === '4:5' ? 'vertical editorial composition, 4:5 framing' :
-    'square composition, 1:1 framing';
-  return `${prompt}. ${aspectHint}.${avoid ? ` Avoid: ${avoid}.` : ''}`.slice(0, 2048);
+function normalizeSpaces(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
 }
 
-async function runFlux2(env, prompt, width, height, seed) {
+function dedupePrompt(value, max = 520) {
+  let text = normalizeSpaces(value)
+    .replace(/(?:no text[,.; ]*){2,}/gi, 'no text, ')
+    .replace(/(?:no watermark[,.; ]*){2,}/gi, 'no watermark, ')
+    .replace(/(?:photorealistic editorial(?: news)? (?:illustration|photography)[,.; ]*){2,}/gi, 'photorealistic editorial image, ')
+    .replace(/\s+,/g, ',')
+    .replace(/,{2,}/g, ',')
+    .replace(/\.{2,}/g, '.');
+  if (text.length <= max) return text;
+  const clipped = text.slice(0, max);
+  const boundary = Math.max(clipped.lastIndexOf('. '), clipped.lastIndexOf(', '), clipped.lastIndexOf(' '));
+  return (boundary > max * 0.72 ? clipped.slice(0, boundary) : clipped).trim().replace(/[,. ]+$/, '') + '.';
+}
+
+function friendlyAiError(error) {
+  const message = String(error?.message || error || 'Falha na IA');
+  if (/3036|daily free allocation|10,?000 neurons/i.test(message)) {
+    return { code: 'FREE_DAILY_LIMIT', status: 429, message: 'Limite gratuito diário da IA atingido. Nenhuma cobrança será feita. A geração volta após a renovação da cota gratuita da Cloudflare.' };
+  }
+  if (/3040|out of capacity/i.test(message)) {
+    return { code: 'TEMPORARY_CAPACITY', status: 503, message: 'A IA gratuita está temporariamente sem capacidade. Aguarde um pouco e tente novamente.' };
+  }
+  if (/5035|requires.*paid|paid plan/i.test(message)) {
+    return { code: 'PAID_MODEL_BLOCKED', status: 503, message: 'Este modelo exige plano pago e foi bloqueado pelo modo MVP gratuito. Nenhuma cobrança foi realizada.' };
+  }
+  return { code: 'AI_ERROR', status: 500, message };
+}
+
+function buildImagePrompt(input) {
+  const prompt = dedupePrompt(input.prompt, 520);
+  const avoid = dedupePrompt(input.negative, 220);
+  const format = String(input.format || '1:1');
+  if (!prompt) throw new Error('Prompt vazio');
+  const aspectHint = format === '16:9' ? 'wide 16:9 composition' :
+    format === '9:16' ? 'vertical 9:16 composition' :
+    format === '4:5' ? 'vertical 4:5 editorial composition' :
+    'square 1:1 composition';
+  return dedupePrompt(`${prompt}. ${aspectHint}.${avoid ? ` Avoid ${avoid}.` : ''}`, 760);
+}
+
+async function runFlux2Free(env, prompt, width, height) {
   const form = new FormData();
   form.append('prompt', prompt);
   form.append('width', String(width));
   form.append('height', String(height));
-  form.append('guidance', '3.5');
-  if (Number.isFinite(seed)) form.append('seed', String(seed));
 
   const serialized = new Response(form);
-  const result = await env.AI.run(IMAGE_PRIMARY, {
+  const result = await env.AI.run(IMAGE_MODEL, {
     multipart: {
       body: serialized.body,
       contentType: serialized.headers.get('content-type'),
     },
   });
-  if (!result?.image) throw new Error('FLUX.2 não retornou imagem');
+  if (!result?.image) throw new Error('FLUX.2 Klein não retornou imagem');
   return {
     image: `data:image/jpeg;base64,${result.image}`,
-    model: IMAGE_PRIMARY,
-    modelLabel: 'FLUX.2 Klein 4B',
+    model: IMAGE_MODEL,
+    modelLabel: 'FLUX.2 Klein 4B · Free MVP',
   };
 }
 
-async function runFlux1(env, prompt, quality) {
-  const steps = quality === 'Alto' ? 8 : quality === 'Rápido' ? 4 : 6;
-  // Workers AI currently validates the FLUX.1 Schnell binding schema without
-  // accepting `seed`, even though older examples referenced it. Keep the
-  // fallback request limited to the schema-safe fields.
-  const result = await env.AI.run(IMAGE_FALLBACK, {
-    prompt,
-    steps,
-  });
-  if (!result?.image) throw new Error('FLUX.1 não retornou imagem');
-  return {
-    image: `data:image/jpeg;base64,${result.image}`,
-    model: IMAGE_FALLBACK,
-    modelLabel: 'FLUX.1 Schnell',
-  };
-}
-
-async function generateOne(env, input, index) {
+async function generateOne(env, input) {
   const [width, height] = normalizeFormat(input.format);
   const prompt = buildImagePrompt(input);
-  const requested = input.model || 'auto';
-  const hasSeed = input.seed !== null && input.seed !== undefined && String(input.seed).trim() !== '';
-  const baseSeed = hasSeed ? Number(input.seed) : NaN;
-  const seed = Number.isFinite(baseSeed) ? Math.abs(Math.trunc(baseSeed + index)) : null;
-
-  const tryFlux2 = () => runFlux2(env, prompt, width, height, seed);
-  const tryFlux1 = () => runFlux1(env, prompt, input.quality);
-
-  if (requested === 'flux1-schnell') {
-    try {
-      return await tryFlux1();
-    } catch (firstError) {
-      try {
-        const fallback = await tryFlux2();
-        return { ...fallback, fallbackFrom: firstError?.message || 'FLUX.1 falhou' };
-      } catch (secondError) {
-        throw new Error(`FLUX.1: ${firstError?.message || 'falhou'} | FLUX.2 fallback: ${secondError?.message || 'falhou'}`);
-      }
-    }
-  }
-
-  try {
-    return await tryFlux2();
-  } catch (firstError) {
-    try {
-      const fallback = await tryFlux1();
-      return { ...fallback, fallbackFrom: firstError?.message || 'FLUX.2 falhou' };
-    } catch (secondError) {
-      throw new Error(`FLUX.2: ${firstError?.message || 'falhou'} | FLUX.1 fallback: ${secondError?.message || 'falhou'}`);
-    }
-  }
+  return runFlux2Free(env, prompt, width, height);
 }
 
 function extractTextModelOutput(output) {
@@ -157,22 +135,23 @@ function parseLooseJson(text) {
 }
 
 function fallbackArticleAnalysis(input) {
-  const title = safePrompt(input.title, 240);
-  const subtitle = safePrompt(input.subtitle, 500);
-  const text = safePrompt(input.text, 4000);
-  const subject = title || subtitle || text.slice(0, 180) || 'tema jornalístico';
+  const title = safePrompt(input.title, 220);
+  const subtitle = safePrompt(input.subtitle, 360);
+  const text = safePrompt(input.text, 2200);
+  const subject = normalizeSpaces(title || subtitle || text.slice(0, 180) || 'tema jornalístico');
+  const base = dedupePrompt(`Editorial documentary photograph illustrating ${subject}. Neutral journalistic framing, credible real-world environment, natural light, realistic detail, clearly illustrative, no text, no watermark`, 430);
   return {
     summary: subject,
     entities: [],
     mood: 'editorial, informativo e neutro',
-    notes: 'Criar imagem ilustrativa e não representar a cena como fotografia factual do acontecimento.',
+    notes: 'Imagem ilustrativa; não apresentar como registro factual do acontecimento.',
     concepts: [
-      { title: 'Cena contextual', prompt: `Photorealistic editorial illustration inspired by: ${subject}. Contextual scene, neutral journalistic tone, no text, no watermark.` },
-      { title: 'Detalhe simbólico', prompt: `Photorealistic symbolic editorial image about: ${subject}. Strong visual metaphor, clean composition, neutral news aesthetic, no text.` },
-      { title: 'Ambiente de apoio', prompt: `Documentary-style contextual photograph illustrating the broader theme: ${subject}. Credible environment, natural light, no text, clearly illustrative.` },
+      { title: 'Cena contextual', prompt: base },
+      { title: 'Detalhe simbólico', prompt: dedupePrompt(`Editorial close-up representing ${subject}. Credible symbolic details, neutral news aesthetic, natural light, no text, no watermark`, 360) },
+      { title: 'Ambiente de apoio', prompt: dedupePrompt(`Documentary-style environment related to ${subject}. Clean editorial composition with negative space for layout, realistic light, no text, no watermark`, 360) },
     ],
-    prompt: `Photorealistic editorial news illustration about ${subject}. Documentary realism, natural lighting, credible details, neutral composition, no text, no watermark, clearly illustrative rather than a factual record of a specific event.`,
-    negative: 'text, watermark, logo, fake headline, distorted anatomy, sensationalized scene',
+    prompt: base,
+    negative: 'text, watermark, logo, fake headline, distorted anatomy, sensationalism',
   };
 }
 
@@ -186,7 +165,7 @@ async function analyzeArticle(env, input) {
   const messages = [
     {
       role: 'system',
-      content: `Você é o módulo editorial visual do FORMA DESIGN. Analise matérias jornalísticas em português e proponha imagens ilustrativas úteis para uma redação. Nunca trate uma imagem gerada como registro factual de um evento real. Evite inventar rostos, logos, placas, números ou fatos específicos. Retorne APENAS JSON válido com esta estrutura: {"summary":"...","entities":["..."],"mood":"...","notes":"...","concepts":[{"title":"...","prompt":"..."},{"title":"...","prompt":"..."},{"title":"...","prompt":"..."}],"prompt":"...","negative":"..."}. Os prompts de imagem devem ser em inglês, fotorealistas quando apropriado, sem texto e sem marca d'água.`
+      content: `Você é o módulo editorial visual do FORMA DESIGN. Analise matérias jornalísticas em português e proponha imagens ILUSTRATIVAS para uma redação. Nunca apresente a imagem como registro factual de um evento. Evite inventar números, manchetes, logos, placas ou fatos. Retorne APENAS JSON válido com: {"summary":"...","entities":["..."],"mood":"...","notes":"...","concepts":[{"title":"...","prompt":"..."},{"title":"...","prompt":"..."},{"title":"...","prompt":"..."}],"prompt":"...","negative":"..."}. Regras: prompts em inglês; cada prompt entre 180 e 420 caracteres; uma única descrição direta da cena; sem repetir 'photorealistic', 'editorial', 'no text' ou 'no watermark'; prefira cenário, sujeito, ação, enquadramento e luz; não use listas dentro do prompt.`
     },
     {
       role: 'user',
@@ -198,7 +177,7 @@ async function analyzeArticle(env, input) {
     const output = await env.AI.run(TEXT_MODEL, {
       messages,
       temperature: 0.25,
-      max_completion_tokens: 1200,
+      max_completion_tokens: 850,
     });
     const parsed = parseLooseJson(extractTextModelOutput(output));
     if (!parsed) throw new Error('Resposta editorial fora do formato esperado');
@@ -210,10 +189,10 @@ async function analyzeArticle(env, input) {
       notes: safePrompt(parsed.notes || fallback.notes, 1000),
       concepts: Array.isArray(parsed.concepts) ? parsed.concepts.slice(0, 3).map((c, i) => ({
         title: safePrompt(c?.title || `Conceito ${i + 1}`, 160),
-        prompt: safePrompt(c?.prompt || fallback.concepts[i]?.prompt || '', 2048),
+        prompt: dedupePrompt(c?.prompt || fallback.concepts[i]?.prompt || '', 460),
       })) : fallback.concepts,
-      prompt: safePrompt(parsed.prompt || fallback.prompt, 2048),
-      negative: safePrompt(parsed.negative || fallback.negative, 600),
+      prompt: dedupePrompt(parsed.prompt || fallback.prompt, 480),
+      negative: dedupePrompt(parsed.negative || fallback.negative, 220),
     };
   } catch {
     return fallbackArticleAnalysis(input);
@@ -245,7 +224,7 @@ async function handleApi(request, env) {
   const url = new URL(request.url);
 
   if (url.pathname === '/api/health') {
-    return json({ ok: true, service: 'forma-design', version: '0.6.1', runtime: 'cloudflare-workers' });
+    return json({ ok: true, service: 'forma-design', version: '0.6.2', build: BUILD_ID, runtime: 'cloudflare-workers' });
   }
 
   if (url.pathname === '/api/ai/status' && request.method === 'GET') {
@@ -255,14 +234,17 @@ async function handleApi(request, env) {
       engine: 'FORMA AI Engine',
       provider: 'Cloudflare Workers AI',
       models: {
-        imagePrimary: IMAGE_PRIMARY,
-        imagePrimaryLabel: 'FLUX.2 Klein 4B',
-        imageFallback: IMAGE_FALLBACK,
-        imageFallbackLabel: 'FLUX.1 Schnell',
+        imagePrimary: IMAGE_MODEL,
+        imagePrimaryLabel: 'FLUX.2 Klein 4B · Free MVP',
         text: TEXT_MODEL,
-        textLabel: 'GLM-4.7-Flash',
+        textLabel: 'GLM-4.7-Flash · Free MVP',
       },
-      capabilities: ['text-to-image', 'article-analysis', 'provider-fallback', 'seed-flux2-only'],
+      engineVersion: ENGINE_VERSION,
+      build: BUILD_ID,
+      billingMode: 'free-only',
+      paidFallbacks: false,
+      freeAllocation: '10,000 Neurons/day',
+      capabilities: ['text-to-image', 'article-analysis', 'free-only', 'short-editorial-prompts'],
     });
   }
 
@@ -270,20 +252,22 @@ async function handleApi(request, env) {
     if (!env.AI) return json({ ok: false, error: 'Workers AI binding ausente' }, 503);
     try {
       const input = await readJson(request);
-      const quantity = clamp(input.quantity || 1, 1, 4);
-      const tasks = Array.from({ length: quantity }, (_, i) => generateOne(env, input, i));
-      const results = await Promise.all(tasks);
-      const modelsUsed = [...new Set(results.map(x => x.modelLabel))];
+      const quantity = 1; // MVP gratuito: uma imagem por pedido para preservar a cota diária.
+      const results = [await generateOne(env, input)];
+      const modelsUsed = [results[0].modelLabel];
       return json({
         ok: true,
         images: results.map(x => x.image),
-        model: results[0]?.model || modelInfo(input.model).id,
+        model: results[0]?.model || IMAGE_MODEL,
         modelLabel: modelsUsed.join(' + '),
         modelsUsed,
-        fallbackUsed: results.some(x => x.fallbackFrom),
+        fallbackUsed: false,
+        billingMode: 'free-only',
+        quantity,
       });
     } catch (error) {
-      return json({ ok: false, error: error?.message || 'Falha na geração' }, 500);
+      const friendly = friendlyAiError(error);
+      return json({ ok: false, code: friendly.code, error: friendly.message, billingMode: 'free-only' }, friendly.status);
     }
   }
 
@@ -294,7 +278,8 @@ async function handleApi(request, env) {
       const analysis = await analyzeArticle(env, input);
       return json({ ok: true, analysis, model: TEXT_MODEL, modelLabel: 'GLM-4.7-Flash' });
     } catch (error) {
-      return json({ ok: false, error: error?.message || 'Falha na análise editorial' }, 500);
+      const friendly = friendlyAiError(error);
+      return json({ ok: false, code: friendly.code, error: friendly.message, billingMode: 'free-only' }, friendly.status);
     }
   }
 

@@ -1,0 +1,22 @@
+FORMA DESIGN 0.6.2 - DEPLOY GITHUB -> CLOUDFLARE
+
+Este pacote nao exige Node.js instalado no seu computador.
+
+1. Suba os arquivos desta pasta para o repositorio GitHub ja conectado ao Cloudflare.
+2. Faça Commit changes na branch usada pelo deploy (normalmente main).
+3. O Cloudflare Workers Builds detecta o commit e executa o deploy no servidor.
+4. Abra a mesma URL do FORMA DESIGN e force a atualizacao do navegador.
+5. Em IA > Status, confirme o build: 062-FREE-20260824.
+
+Arquivos principais a substituir no repositorio:
+- src/index.js
+- public/index.html
+- package.json
+- wrangler.jsonc
+- BUILD_INFO.txt
+
+Politica do MVP:
+- somente Workers AI Free
+- nenhum fallback pago
+- uma imagem por pedido
+- sem seed

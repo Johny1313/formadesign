@@ -1,17 +1,16 @@
-FORMA DESIGN 0.6.1 - HOTFIX WORKERS AI
+FORMA DESIGN 0.6.2 - FREE MVP
+Build: 062-FREE-20260824
 Data: 24/08/2026
 
-Correcoes:
-- corrige erro 5006 de schema /seed no fallback FLUX.1 Schnell
-- seed automatico agora fica realmente automatico (nao envia numero aleatorio)
-- seed manual continua disponivel para FLUX.2 Klein
-- fallback FLUX.1 usa apenas campos aceitos pelo schema atual
-- erros de FLUX.2 e FLUX.1 agora sao preservados juntos quando ambos falham
-- mantem o mesmo nome do Worker forma-design-v060 para atualizar o deploy existente
-
-Arquitetura mantida:
-- WebApp Cloudflare Workers + Static Assets
-- Workers AI integrado
-- FLUX.2 Klein 4B principal
-- FLUX.1 Schnell fallback
-- GLM-4.7-Flash para materias
+Política desta versão:
+- custo obrigatório: R$ 0
+- Cloudflare Workers AI Free
+- FLUX.2 Klein 4B como único motor de imagem
+- GLM-4.7-Flash para análise editorial
+- sem FLUX.1 fallback
+- sem seed
+- sem provedores pagos
+- uma imagem por pedido no MVP
+- prompts editoriais compactos e sem duplicação
+- tratamento amigável para limite diário e falta temporária de capacidade
+- preparada para novos providers no futuro, mas todos desativados no MVP Free
