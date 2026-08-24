@@ -1,0 +1,19 @@
+FORMA DESIGN 0.6.1 - HOTFIX IA
+
+ERRO CORRIGIDO
+5006: Error: Additional or unevaluated properties /seed at '/' not allowed
+
+CAUSA
+O FORMA AI enviava seed tambem para o fallback FLUX.1 Schnell. O schema validado atualmente pelo binding Workers AI pode rejeitar esse campo. Como a versao anterior sempre criava uma seed aleatoria, o fallback podia falhar mesmo quando o usuario deixava Seed como Automatica.
+
+CORRECAO
+- FLUX.1 Schnell nao recebe mais seed.
+- Seed vazia nao gera mais numero artificial; o provedor decide a aleatoriedade.
+- Seed manual e enviada somente ao FLUX.2 Klein, que aceita seed via multipart.
+- Se principal e fallback falharem, a API devolve os dois erros para diagnostico.
+
+COMO ATUALIZAR VIA GITHUB
+Substitua no repositorio os arquivos src/index.js e public/index.html pelos desta versao e faça Commit changes. O Cloudflare conectado ao GitHub deve iniciar um novo deploy automaticamente.
+
+IMPORTANTE
+O wrangler.jsonc continua com name = forma-design-v060 de proposito para atualizar o Worker ja existente, em vez de criar outro endereco.
