@@ -39,7 +39,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 .app{height:100vh;display:grid;grid-template-rows:66px 1fr;background:var(--bg)}
 
-/* Embedded only inside FORMA DESIGN 0.9.7.5.17 */
+/* Embedded only inside FORMA DESIGN 0.9.7.5.18 */
 body{background:#d8d6d1}
 .app{height:100vh;grid-template-rows:1fr}
 .topbar{display:none!important}
@@ -890,6 +890,59 @@ function getData(){
   }
 
   return rows;
+}
+
+function getStandardSeriesDataset(){
+  const parsed = getParsedTable();
+  const rows = applyLimitToRows(parsed.rows);
+  const seriesCount = Math.max(
+    0,
+    (parsed.headers?.length || 0) - 1,
+    ...rows.map(row => Math.max(0, (row?.length || 0) - 1))
+  );
+
+  const xLabels = rows.map((r, i) => formatDateLabel(r[0] || `Item ${i + 1}`));
+  const rawXLabels = rows.map((r, i) => r[0] || `Item ${i + 1}`);
+
+  const series = Array.from({length: seriesCount}, (_, seriesIndex) => ({
+    idx: seriesIndex,
+    rawLabel: String(parsed.headers?.[seriesIndex + 1] || `Série ${seriesIndex + 1}`).trim(),
+    label: String(parsed.headers?.[seriesIndex + 1] || `Série ${seriesIndex + 1}`).trim(),
+    rawValues: rows.map(r => parseNumericCell(r?.[seriesIndex + 1])),
+    plotValues: []
+  }));
+
+  const globalMax = Math.max(0, ...series.flatMap(item => item.rawValues));
+  const normalize = $('normalize100').checked;
+  series.forEach(item => {
+    item.plotValues = item.rawValues.map(value => normalize && globalMax > 0 ? (value / globalMax) * 100 : value);
+  });
+
+  return {xLabels, rawXLabels, series};
+}
+
+function getStandardSeriesAxisData(dataset){
+  return dataset.series.flatMap(series => series.plotValues.map(plotValue => ({plotValue})));
+}
+
+function getSeriesLegendData(dataset){
+  return dataset.series.map(series => ({
+    idx: series.idx,
+    label: series.label,
+    rawLabel: series.rawLabel,
+    rawValue: series.rawValues[series.rawValues.length - 1] ?? 0,
+    plotValue: series.plotValues[series.plotValues.length - 1] ?? 0
+  }));
+}
+
+function getStandardXAxisData(dataset){
+  return dataset.xLabels.map((label, idx) => ({
+    idx,
+    label,
+    rawLabel: dataset.rawXLabels[idx] || label,
+    rawValue: 0,
+    plotValue: 0
+  }));
 }
 
 function getBarRaceDataset(){
@@ -1927,6 +1980,18 @@ function draw(){
     return;
   }
 
+  const standardSeries = (chartType === 'line' || chartType === 'area') ? getStandardSeriesDataset() : null;
+  if(standardSeries && standardSeries.series.length > 1){
+    if(!standardSeries.xLabels.length){
+      drawEmptyState('Cole dados para gerar o gráfico');
+      return;
+    }
+    const axis = getYAxisConfig(getStandardSeriesAxisData(standardSeries));
+    const hideValues = $('hideValues').checked;
+    drawMultiSeriesLine(standardSeries, w, h, axis, hideValues, chartType === 'area', progress);
+    return;
+  }
+
   const data = getData();
   if(!data.length){
     drawEmptyState('Cole dados para gerar o gráfico');
@@ -2219,6 +2284,112 @@ function drawLine(data, w, h, axis, hideValues, fillArea, progress){
 
   drawXAxisTitle(c, w, h, pad);
   drawLegend(c, data, w, h, pad);
+  c.textAlign = 'left';
+}
+
+function drawMultiSeriesLine(dataset, w, h, axis, hideValues, fillArea, progress){
+  const c = ctx;
+  const legendData = getSeriesLegendData(dataset);
+  const xAxisData = getStandardXAxisData(dataset);
+  let xBottomReserve = 8;
+  if($('showX').checked){
+    const rotation = Math.abs(+($('xRotation').value || 0));
+    xBottomReserve += rotation >= 45 ? 34 : rotation > 0 ? 24 : 16;
+    if($('xTitle').value.trim()) xBottomReserve += 16;
+  }
+  const basePad = {
+    left: $('showY').checked ? ($('yTitle').value.trim() ? 54 : 42) : 8,
+    right: 10,
+    top: hideValues ? 8 : 22,
+    bottom: xBottomReserve
+  };
+  const legendReserve = getLegendReserve(c, legendData, basePad, w, h);
+  const pad = {
+    left: basePad.left + (legendReserve.left || 0),
+    right: basePad.right + (legendReserve.right || 0),
+    top: basePad.top + (legendReserve.top || 0),
+    bottom: basePad.bottom + (legendReserve.bottom || 0)
+  };
+  pad.innerW = Math.max(20, w - pad.left - pad.right);
+  pad.innerH = Math.max(20, h - pad.top - pad.bottom);
+
+  const hidePoints = $('hideLinePoints').checked;
+  const smooth = $('smoothCurves').checked;
+  const lineWidth = Math.max(0.25, +$('areaLineWidth').value || 1);
+  const lineOpacity = Math.max(0, Math.min(100, +$('areaLineOpacity').value || 100)) / 100;
+  const fillOpacity = Math.max(0, Math.min(100, +$('areaFillOpacity').value || 0)) / 100;
+
+  drawYAxis(c, w, h, pad, axis);
+  drawReferenceLinesForLine(xAxisData, w, h, pad, axis);
+
+  dataset.series.forEach(series => {
+    const seriesColor = itemColor(series.idx);
+    const pointData = dataset.xLabels.map((label, index) => ({
+      idx: series.idx,
+      label,
+      rawLabel: dataset.rawXLabels[index] || label,
+      rawValue: series.rawValues[index] ?? 0,
+      value: series.rawValues[index] ?? 0,
+      plotValue: series.plotValues[index] ?? 0
+    }));
+
+    const {pts} = buildAnimatedLinePoints(pointData, pad, axis, progress);
+    if(!pts.length) return;
+
+    if(fillArea){
+      c.beginPath();
+      c.moveTo(pts[0].x, h - pad.bottom);
+      if(smooth && pts.length > 1){
+        c.lineTo(pts[0].x, pts[0].y);
+        drawSmoothPath(c, pts);
+      } else {
+        pts.forEach(p => c.lineTo(p.x, p.y));
+      }
+      c.lineTo(pts[pts.length - 1].x, h - pad.bottom);
+      c.closePath();
+      c.fillStyle = hexToRgba(seriesColor, fillOpacity);
+      c.fill();
+    }
+
+    c.beginPath();
+    if(smooth && pts.length > 1) drawSmoothPath(c, pts);
+    else pts.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+    c.strokeStyle = hexToRgba(seriesColor, lineOpacity);
+    c.lineWidth = lineWidth;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    c.stroke();
+
+    pts.forEach(p => {
+      if(!hidePoints && !p.interpolated){
+        const pointRadius = Math.max(4, lineWidth + 1);
+        c.fillStyle = hexToRgba(seriesColor, lineOpacity);
+        c.beginPath();
+        c.arc(p.x, p.y, pointRadius, 0, Math.PI * 2);
+        c.fill();
+        if(state.selectedItems.has(series.idx)) drawSelectionOutlineCircle(c, p.x, p.y, pointRadius);
+        state.hitRegions.push({idx:series.idx, type:'circle', x:p.x, y:p.y, r:Math.max(8, pointRadius + 3)});
+      }
+
+      if(!hideValues && !p.interpolated && progress > 0.92){
+        c.fillStyle = seriesColor;
+        c.font = '700 10px Inter, sans-serif';
+        c.textAlign = 'center';
+        c.fillText(fmt(p.d.rawValue), p.x, p.y - 11);
+      }
+    });
+  });
+
+  if($('showX').checked){
+    xAxisData.forEach((d, index) => {
+      if(!shouldShowXLabel(d, index, xAxisData)) return;
+      const x = pad.left + (xAxisData.length === 1 ? pad.innerW / 2 : index * pad.innerW / (xAxisData.length - 1));
+      drawRotatedLabel(c, d.label, x, h - pad.bottom + 16);
+    });
+  }
+
+  drawXAxisTitle(c, w, h, pad);
+  drawLegend(c, legendData, w, h, pad);
   c.textAlign = 'left';
 }
 
@@ -2770,8 +2941,17 @@ function chartPointerUp(){
 }
 
 function applyColorToAll(){
-  const d = getData();
   const color = $('globalColor').value;
+  if(chartType === 'line' || chartType === 'area'){
+    const dataset = getStandardSeriesDataset();
+    if(dataset.series.length > 1){
+      dataset.series.forEach(series => state.itemColors[series.idx] = color);
+      renderItemList();
+      draw();
+      return;
+    }
+  }
+  const d = getData();
   d.forEach(item => state.itemColors[item.idx] = color);
   renderItemList();
   draw();
