@@ -59,7 +59,7 @@ export default {
       return json({
         ok:true,
         product:'FORMA DESIGN',
-        version:'0.9.7.5.14',
+        version:'0.9.7.5.16',
         chartStudio:true,
         giphy:true,
         removeBg:true,removeBgMode:env.REMOVEBG_API_KEY?'environment':'bundled-fallback',
@@ -89,6 +89,13 @@ export default {
       return json({ok:false,error:'Endpoint não encontrado'},404);
     }
 
-    return env.ASSETS.fetch(request);
+    const assetResponse=await env.ASSETS.fetch(request);
+    if(url.pathname.startsWith('/design/')){
+      const headers=new Headers(assetResponse.headers);
+      headers.set('Cache-Control','no-store, max-age=0');
+      headers.set('X-Forma-Version','0.9.7.5.16');
+      return new Response(assetResponse.body,{status:assetResponse.status,statusText:assetResponse.statusText,headers});
+    }
+    return assetResponse;
   }
 };

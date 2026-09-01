@@ -18,7 +18,8 @@
     "binding": "ASSETS",
     "run_worker_first": [
       "/api/*",
-      "/"
+      "/",
+      "/design/*"
     ],
     "not_found_handling": "404-page"
   },
