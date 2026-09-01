@@ -1,6 +1,6 @@
 {
   "product": "FORMA DESIGN",
-  "version": "0.9.7.5.10",
+  "version": "0.9.7.5.11",
   "ronda_one_in_project": false,
   "projects_page_or_tab": false,
   "save_project_function": true,
@@ -90,5 +90,14 @@
     "context_menu_delete": true,
     "multi_selection": true,
     "typing_guard": true
+  },
+  "chart_integration": {
+    "mode": "integrated_artboard_element",
+    "new_artboard_creation": false,
+    "separate_stage_mode_removed": true,
+    "chart_inserted_as": "image element with chart metadata",
+    "chart_asset_kind": "chart",
+    "reopen_chart_editor": true,
+    "chart_studio_embed_modal": true
   }
 }

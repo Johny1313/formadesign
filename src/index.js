@@ -59,7 +59,7 @@ export default {
       return json({
         ok:true,
         product:'FORMA DESIGN',
-        version:'0.9.7.5.10',
+        version:'0.9.7.5.11',
         chartStudio:true,
         giphy:true,
         removeBg:!!env.REMOVEBG_API_KEY,

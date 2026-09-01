@@ -319,6 +319,12 @@ canvas{display:block;width:100%;height:100%}
 }
 
 </style>
+
+<style id="chartStudioEmbed097511">
+body.embed-mode{background:#fff}
+body.embed-mode .app{min-height:100vh}
+#insertFormaBtn.embed-visible{display:inline-flex!important;align-items:center;justify-content:center}
+</style>
 </head>
 <body>
 <div class="app">
@@ -337,6 +343,7 @@ canvas{display:block;width:100%;height:100%}
       <button class="btn ghost" id="resetPosBtn">Reenquadrar</button>
       <button class="btn" id="resetBtn">Restaurar exemplo</button>
       <button class="btn primary" id="exportBtn">Exportar PNG</button>
+      <button class="btn" id="insertFormaBtn" style="display:none">Inserir no FORMA</button>
     </div>
   </header>
 
@@ -2768,7 +2775,8 @@ function applyColorToSelected(){
   draw();
 }
 
-function exportPNG(){
+const EMBED_MODE = new URLSearchParams(location.search).get('embed') === '1';
+function buildExportCanvas(){
   const stage = $('stage');
   const rect = stage.getBoundingClientRect();
   const exportCanvas = document.createElement('canvas');
@@ -2782,10 +2790,129 @@ function exportPNG(){
   const chartRect = $('chartBox').getBoundingClientRect();
   const stageRect = stage.getBoundingClientRect();
   ex.drawImage(canvas, chartRect.left-stageRect.left, chartRect.top-stageRect.top, chartRect.width, chartRect.height);
+  return {exportCanvas, width: Math.round(rect.width), height: Math.round(rect.height)};
+}
+function buildChartConfig(){
+  return {
+    chartType,
+    formatMode,
+    state: JSON.parse(JSON.stringify({formatW:state.formatW, formatH:state.formatH, margins:state.margins, itemColors:state.itemColors})),
+    controls: {
+      hideValues: $('hideValues').checked,
+      showX: $('showX').checked,
+      showY: $('showY').checked,
+      formatDates: $('formatDates').checked,
+      dateFormat: $('dateFormat').value,
+      xTitle: $('xTitle').value,
+      xLabelsMode: $('xLabelsMode').value,
+      xCustomLabels: $('xCustomLabels').value,
+      xRotation: $('xRotation').value,
+      xLimit: $('xLimit').value,
+      yTitle: $('yTitle').value,
+      yCustomTicks: $('yCustomTicks').value,
+      refXOn: $('refXOn').checked,
+      refXValue: $('refXValue').value,
+      refYOn: $('refYOn').checked,
+      refYValue: $('refYValue').value,
+      refLineColor: $('refLineColor').value,
+      refLineWidth: $('refLineWidth').value,
+      lockY: $('lockY').checked,
+      yMin: $('yMin').value,
+      yMax: $('yMax').value,
+      yStep: $('yStep').value,
+      globalColor: $('globalColor').value,
+      normalize100: $('normalize100').checked,
+      barLabelGap: $('barLabelGap').value,
+      barRadius: $('barRadius').value,
+      hideLinePoints: $('hideLinePoints').checked,
+      smoothCurves: $('smoothCurves').checked,
+      areaColor: $('areaColor').value,
+      areaLineWidth: $('areaLineWidth').value,
+      areaFillOpacity: $('areaFillOpacity').value,
+      areaLineOpacity: $('areaLineOpacity').value,
+      showLegend: $('showLegend').checked,
+      legendDirection: $('legendDirection').value,
+      legendAlign: $('legendAlign').value,
+      legendHorizontalPos: $('legendHorizontalPos').value,
+      legendVerticalPos: $('legendVerticalPos').value,
+      enableAnimation: $('enableAnimation').checked,
+      animSpeed: $('animSpeed').value
+    },
+    sheetMatrix: JSON.parse(JSON.stringify(sheetMatrix))
+  };
+}
+function applyChartConfig(config){
+  if(!config || typeof config !== 'object') return;
+  if(Array.isArray(config.sheetMatrix) && config.sheetMatrix.length){
+    sheetMatrix = config.sheetMatrix.map(row => Array.isArray(row) ? row.map(v => String(v ?? '')) : []);
+    renderSheet();
+  }
+  if(config.chartType){
+    chartType = config.chartType;
+    document.querySelectorAll('.type').forEach(x => x.classList.toggle('active', x.dataset.type === chartType));
+  }
+  if(config.state){
+    if(config.state.formatW) state.formatW = +config.state.formatW || state.formatW;
+    if(config.state.formatH) state.formatH = +config.state.formatH || state.formatH;
+    if(config.state.margins) state.margins = Object.assign({}, state.margins, config.state.margins);
+    if(config.state.itemColors) state.itemColors = Object.assign({}, config.state.itemColors);
+    syncMarginInputs();
+  }
+  if(config.formatMode) formatMode = config.formatMode;
+  const c = config.controls || {};
+  Object.keys(c).forEach(key => {
+    const el = $(key);
+    if(!el) return;
+    if(el.type === 'checkbox') el.checked = !!c[key];
+    else el.value = c[key];
+  });
+  updateXCustomVisibility();
+  updateLegendControlVisibility();
+  updateAnimationButtons();
+  if(formatMode === 'custom'){
+    $('customWidth').value = state.formatW;
+    $('customHeight').value = state.formatH;
+    setFormat('custom');
+  } else if(state.formatW === 1080 && state.formatH === 1350) setFormat('1080x1350');
+  else if(state.formatW === 1080 && state.formatH === 1920) setFormat('1080x1920');
+  else if(state.formatW === 1920 && state.formatH === 1080) setFormat('1920x1080');
+  else {
+    $('customWidth').value = state.formatW;
+    $('customHeight').value = state.formatH;
+    setFormat('custom');
+  }
+  renderItemList();
+  restartAnimation(false);
+}
+function exportPNG(){
+  const built = buildExportCanvas();
   const a = document.createElement('a');
   a.download = 'grafico.png';
-  a.href = exportCanvas.toDataURL('image/png');
+  a.href = built.exportCanvas.toDataURL('image/png');
   a.click();
+}
+function insertIntoForma(){
+  const built = buildExportCanvas();
+  const payload = {name:'Gráfico',chartType,pngDataUrl:built.exportCanvas.toDataURL('image/png'),width:built.width,height:built.height,formatW:state.formatW,formatH:state.formatH,config:buildChartConfig()};
+  if(window.parent && window.parent !== window) window.parent.postMessage({type:'forma-chart-insert', payload}, '*');
+}
+window.addEventListener('message', event => {
+  const data = event.data || {};
+  if(data.type !== 'forma-chart-open') return;
+  const payload = data.payload || {};
+  if(payload.formatW && payload.formatH && !payload.config){
+    state.formatW = Math.max(100, +payload.formatW || 1080);
+    state.formatH = Math.max(100, +payload.formatH || 1080);
+    $('customWidth').value = state.formatW;
+    $('customHeight').value = state.formatH;
+    setFormat('custom');
+  }
+  if(payload.config) applyChartConfig(payload.config); else restartAnimation(false);
+});
+if(EMBED_MODE){
+  document.body.classList.add('embed-mode');
+  $('insertFormaBtn').classList.add('embed-visible');
+  setTimeout(()=>{if(window.parent && window.parent !== window) window.parent.postMessage({type:'forma-chart-ready'}, '*');},40);
 }
 
 document.querySelectorAll('.tab').forEach(btn => {
@@ -2863,6 +2990,7 @@ $('resetPosBtn').addEventListener('click', () => {
 });
 $('resetBtn').addEventListener('click', () => location.reload());
 $('exportBtn').addEventListener('click', exportPNG);
+$('insertFormaBtn').addEventListener('click', insertIntoForma);
 
 $('playAnimBtn').addEventListener('click', () => playAnimation());
 $('pauseAnimBtn').addEventListener('click', () => pauseAnimation());

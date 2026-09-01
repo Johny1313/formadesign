@@ -1,4 +1,4 @@
-# FORMA DESIGN 0.9.7.5.10
+# FORMA DESIGN 0.9.7.5.11
 
 Projeto independente do editor FORMA DESIGN.
 
@@ -70,3 +70,12 @@ A exclusão foi reforçada por quatro caminhos:
 - botão **×** em cada camada e item **Excluir camada** no menu de contexto.
 
 A exclusão múltipla também é suportada. Campos de texto, inputs e edição inline ignoram Backspace/Delete para evitar apagar objetos enquanto o usuário digita.
+
+
+## Chart Studio integrado à prancheta — v0.9.7.5.11
+
+- O Chart Studio deixou de ocupar uma área separada do editor.
+- O gráfico agora é inserido diretamente na prancheta atual como um elemento integrado.
+- Não é criada uma nova prancheta para usar gráficos.
+- O elemento de gráfico pode ser movido, redimensionado, duplicado, organizado em camadas e exportado junto com o layout.
+- Elementos inseridos pelo Chart Studio ficam marcados como `assetKind: "chart"` e podem ser reabertos no editor de gráficos.
