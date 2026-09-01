@@ -1,4 +1,4 @@
-# FORMA DESIGN 0.9.7.5.18
+# FORMA DESIGN 0.9.7.5.19
 
 Projeto independente do editor FORMA DESIGN.
 
@@ -97,7 +97,7 @@ A exclusão múltipla também é suportada. Campos de texto, inputs e edição i
 - O elemento pode ser selecionado novamente e reaberto no Chart Studio para nova edição.
 
 
-## Remove BG — v0.9.7.5.18
+## Remove BG — v0.9.7.5.19
 
 - Corrigido para imagens locais, externas, GIPHY e assets via proxy.
 - Tenta primeiro `/api/remove-bg` no Worker.
@@ -107,20 +107,31 @@ A exclusão múltipla também é suportada. Campos de texto, inputs e edição i
 - Mensagens de erro preservam o motivo retornado pela API.
 
 
-## Deploy verification — v0.9.7.5.18
+## Deploy verification — v0.9.7.5.19
 
 After `npm install` and `npm run deploy`, verify:
 
-- `/api/health` returns `version: 0.9.7.5.18`.
-- `/design/` shows `0.9.7.5.18` in the top bar.
-- responses under `/design/` include `X-Forma-Version: 0.9.7.5.18` and `Cache-Control: no-store`.
+- `/api/health` returns `version: 0.9.7.5.19`.
+- `/design/` shows `0.9.7.5.19` in the top bar.
+- responses under `/design/` include `X-Forma-Version: 0.9.7.5.19` and `Cache-Control: no-store`.
 - Chart Studio PNG export keeps transparent pixels outside the chart.
 - Forma > Shapes > Line is stroke-only, with no fill controls and 0.25px increments.
 
-## Chart Studio — v0.9.7.5.18
+## Chart Studio — v0.9.7.5.19
 
 - Linha e Área agora detectam todas as colunas após a cronologia: A = período; B..N = séries/categorias.
 - O caminho legado de uma única série foi preservado sem alteração de renderização.
 - Gráficos de corrida continuam usando os datasets já validados e não foram substituídos.
 - Em múltiplas séries, cada coluna recebe stroke/cor independente e legenda pelo cabeçalho do CSV.
 - Teste de regressão `scripts/test-chart-multiseries.mjs` impede retorno ao parser fixo em `r[1]` para Linha/Área.
+
+## Chart responsive resize — v0.9.7.5.19
+
+- Gráficos integrados continuam redimensionáveis diretamente na prancheta.
+- Durante o arraste, o gráfico acompanha toda a área do elemento, sem criar letterbox/espaço vazio por `object-fit: contain`.
+- Ao soltar um handle (ou alterar L/A numericamente), um renderizador isolado do Chart Studio recalcula o gráfico usando a nova largura × altura como formato customizado.
+- O novo PNG transparente retorna para a mesma camada, preservando posição, rotação, opacidade, ordem de camada, `chartConfig` e histórico.
+- A próxima abertura em “Editar no Chart Studio” usa a proporção atualizada da área do gráfico.
+- O renderizador responsivo usa um iframe dedicado e mensagens com `event.source` isolado para não interferir no Chart Studio modal.
+- Exportação da prancheta usa a área exata do elemento do gráfico.
+- `npm run check` agora inclui `CHART_RESPONSIVE_RESIZE_TEST` além dos testes já existentes de Remove BG e CSV multi-séries.

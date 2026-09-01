@@ -39,7 +39,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 .app{height:100vh;display:grid;grid-template-rows:66px 1fr;background:var(--bg)}
 
-/* Embedded only inside FORMA DESIGN 0.9.7.5.18 */
+/* Embedded only inside FORMA DESIGN 0.9.7.5.19 */
 body{background:#d8d6d1}
 .app{height:100vh;grid-template-rows:1fr}
 .topbar{display:none!important}
@@ -2964,7 +2964,9 @@ function applyColorToSelected(){
   draw();
 }
 
-const EMBED_MODE = new URLSearchParams(location.search).get('embed') === '1';
+const CHART_QUERY = new URLSearchParams(location.search);
+const EMBED_MODE = CHART_QUERY.get('embed') === '1';
+const RENDER_MODE = CHART_QUERY.get('render') === '1';
 function buildExportCanvas(){
   const stage = $('stage');
   const rect = stage.getBoundingClientRect();
@@ -3084,8 +3086,24 @@ function insertIntoForma(){
   const payload = {name:'Gráfico',chartType,pngDataUrl:built.exportCanvas.toDataURL('image/png'),width:built.width,height:built.height,formatW:state.formatW,formatH:state.formatH,config:buildChartConfig()};
   if(window.parent && window.parent !== window) window.parent.postMessage({type:'forma-chart-insert', payload}, '*');
 }
+function renderResponsiveForForma(payload){
+  if(!payload || !payload.requestId || !payload.elementId) return;
+  if(payload.config) applyChartConfig(payload.config);
+  state.formatW = Math.max(100, +payload.formatW || state.formatW || 1080);
+  state.formatH = Math.max(100, +payload.formatH || state.formatH || 1080);
+  $('customWidth').value = state.formatW;
+  $('customHeight').value = state.formatH;
+  setFormat('custom');
+  requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    draw();
+    const built = buildExportCanvas();
+    const config = buildChartConfig();
+    if(window.parent && window.parent !== window) window.parent.postMessage({type:'forma-chart-render-result',payload:{requestId:payload.requestId,elementId:payload.elementId,pngDataUrl:built.exportCanvas.toDataURL('image/png'),width:built.width,height:built.height,formatW:state.formatW,formatH:state.formatH,config,historySync:payload.historySync!==false}}, '*');
+  }));
+}
 window.addEventListener('message', event => {
   const data = event.data || {};
+  if(data.type === 'forma-chart-render-request'){ renderResponsiveForForma(data.payload || {}); return; }
   if(data.type === 'forma-chart-request-insert'){ insertIntoForma(); return; }
   if(data.type !== 'forma-chart-open') return;
   const payload = data.payload || {};
@@ -3100,8 +3118,8 @@ window.addEventListener('message', event => {
 });
 if(EMBED_MODE){
   document.body.classList.add('embed-mode');
-  $('insertFormaBtn').classList.add('embed-visible');
-  setTimeout(()=>{if(window.parent && window.parent !== window) window.parent.postMessage({type:'forma-chart-ready'}, '*');},40);
+  if(!RENDER_MODE)$('insertFormaBtn').classList.add('embed-visible');
+  setTimeout(()=>{if(window.parent && window.parent !== window) window.parent.postMessage({type:RENDER_MODE?'forma-chart-renderer-ready':'forma-chart-ready'}, '*');},40);
 }
 
 document.querySelectorAll('.tab').forEach(btn => {

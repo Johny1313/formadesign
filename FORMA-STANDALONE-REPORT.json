@@ -1,6 +1,6 @@
 {
   "product": "FORMA DESIGN",
-  "version": "0.9.7.5.18",
+  "version": "0.9.7.5.19",
   "ronda_one_in_project": false,
   "projects_page_or_tab": false,
   "save_project_function": true,
@@ -127,5 +127,16 @@
     "supports_original_src": true,
     "preserves_artboard_element": true,
     "mask_support": true
+  },
+  "chart_responsive_resize": {
+    "enabled": true,
+    "artboard_handle_resize": true,
+    "numeric_width_height_resize": true,
+    "reflow_to_element_area": true,
+    "transparent_png_rerender": true,
+    "dedicated_chart_renderer": true,
+    "history_preserved": true,
+    "export_uses_exact_chart_area": true,
+    "regression_test": "CHART_RESPONSIVE_RESIZE_TEST: PASS"
   }
 }

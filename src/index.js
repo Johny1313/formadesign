@@ -59,7 +59,7 @@ export default {
       return json({
         ok:true,
         product:'FORMA DESIGN',
-        version:'0.9.7.5.18',
+        version:'0.9.7.5.19',
         chartStudio:true,
         giphy:true,
         removeBg:true,removeBgMode:env.REMOVEBG_API_KEY?'environment':'bundled-fallback',
@@ -93,7 +93,7 @@ export default {
     if(url.pathname.startsWith('/design/')){
       const headers=new Headers(assetResponse.headers);
       headers.set('Cache-Control','no-store, max-age=0');
-      headers.set('X-Forma-Version','0.9.7.5.18');
+      headers.set('X-Forma-Version','0.9.7.5.19');
       return new Response(assetResponse.body,{status:assetResponse.status,statusText:assetResponse.statusText,headers});
     }
     return assetResponse;
