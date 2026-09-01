@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FORMA DESIGN 0.9.7.5.21</title>
+  <title>FORMA DESIGN 0.9.7.5.22</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=Lato:wght@300;400;700;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Nunito:wght@300;400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@
       <div class="brand-wrap">
         <div class="brand-mark">F</div>
         <div>
-          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.21</b></div>
+          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.22</b></div>
           <div class="brand-sub">Editor visual de design, conteúdo e gráficos</div>
         </div>
       </div>
@@ -643,6 +643,7 @@
                   <button class="mini-btn" id="captureProjectColorsBtn" type="button">Capturar do projeto</button>
                   <button class="mini-btn" id="newColorTemplateBtn" type="button">Nova paleta</button>
                   <button class="primary-btn" id="saveColorTemplateBtn" type="button">Salvar template</button>
+                  <button class="mini-btn" id="insertColorPaletteTemplateBtn" type="button">Criar layout na prancheta</button>
                 </div>
                 <div class="privacy-note">Clique em uma cor salva para aplicar ao elemento selecionado. Sem seleção, a cor é aplicada ao fundo.</div>
               </div>
@@ -1369,6 +1370,105 @@
     showToast('Selecione texto, forma ou máscara — ou desselecione para aplicar ao fundo',3200);
   }
 
+  function createPaletteTextElement(config={}){
+    const e=elementDefaults('text');
+    e.name=config.name||'Texto paleta';
+    e.text=String(config.text||'');
+    e.x=Math.round(config.x||0);
+    e.y=Math.round(config.y||0);
+    e.w=Math.round(config.w||240);
+    e.h=Math.round(config.h||40);
+    e.fontSize=Math.round(config.fontSize||28);
+    e.fontWeight=config.fontWeight||700;
+    e.fontFamily=config.fontFamily||'Inter';
+    e.letterSpacing=safeNumber(config.letterSpacing,0);
+    e.lineHeight=safeNumber(config.lineHeight,1.05);
+    e.textColor=normalizeHex(config.textColor||'#151515');
+    e.textAlign=config.textAlign||'left';
+    e.uppercase=!!config.uppercase;
+    e.textBoxEnabled=false;
+    return e;
+  }
+
+  function createPaletteShapeElement(config={}){
+    const e=elementDefaults(config.type||'roundRect');
+    e.name=config.name||'Cor da paleta';
+    e.x=Math.round(config.x||0);
+    e.y=Math.round(config.y||0);
+    e.w=Math.round(config.w||120);
+    e.h=Math.round(config.h||120);
+    e.fill=normalizeHex(config.fill||'#ffffff');
+    e.fillMode='solid';
+    e.strokeWidth=safeNumber(config.strokeWidth,0);
+    e.strokeColor=normalizeHex(config.strokeColor||'#000000');
+    if(['rect','square','roundRect'].includes(e.type)){
+      const radius=safeNumber(config.radius,24);
+      e.radii=defaultRadii(radius);
+      e.radiusLinked=true;
+    }
+    return e;
+  }
+
+  function insertColorPaletteTemplate(colors=colorTemplateDraft,name){
+    syncActiveArtboard();
+    ensureArtboards();
+    const palette=normalizeColorTemplateColors(colors);
+    const paletteName=String(name||$('#colorTemplateName')?.value||state.docTitle||'Paleta de cores').trim()||'Paleta de cores';
+    const boardW=state.width,boardH=state.height;
+    const wide=boardW>=boardH*1.2;
+    const outer=Math.round(Math.min(boardW,boardH)*0.055);
+    const panelX=outer;
+    const panelY=outer;
+    const panelW=Math.max(360,boardW-outer*2);
+    const panelH=Math.max(280,Math.min(boardH-outer*2, wide?Math.round(boardH*0.48):Math.round(boardH*0.62)));
+    const padX=Math.round(panelW*0.055);
+    const padTop=Math.round(panelH*0.10);
+    const padBottom=Math.round(panelH*0.07);
+    const titleSize=Math.max(26,Math.round(Math.min(boardW,boardH)*0.045));
+    const subtitleSize=Math.max(14,Math.round(titleSize*0.38));
+    const labelSize=Math.max(14,Math.round(titleSize*0.34));
+    const hexSize=Math.max(13,Math.round(titleSize*0.31));
+    const columns=wide?6:3;
+    const rows=Math.ceil(palette.length/columns);
+    const gap=Math.max(14,Math.round(panelW*0.018));
+    const titleBlockH=titleSize+subtitleSize+24;
+    const availableW=panelW-padX*2-gap*(columns-1);
+    const swatchW=Math.max(84,Math.floor(availableW/columns));
+    const labelBlockH=labelSize+hexSize+20;
+    const usableH=panelH-padTop-padBottom-titleBlockH-gap*Math.max(0,rows-1);
+    const swatchH=Math.max(84,Math.floor((usableH/rows)-labelBlockH));
+    const totalGridH=rows*(swatchH+labelBlockH)+Math.max(0,rows-1)*gap;
+    const startX=panelX+Math.round((panelW-(columns*swatchW+(columns-1)*gap))/2);
+    const startY=panelY+padTop+titleBlockH+Math.max(0,Math.floor((panelH-padTop-padBottom-titleBlockH-totalGridH)/2));
+    const roleLabels=['Primária','Secundária','Apoio 1','Apoio 2','Apoio 3','Apoio 4'];
+    const created=[];
+
+    const panel=createPaletteShapeElement({type:'roundRect',name:'Painel da paleta',x:panelX,y:panelY,w:panelW,h:panelH,fill:'#ffffff',strokeWidth:1,strokeColor:'#ddd7cd',radius:Math.round(Math.min(panelW,panelH)*0.035)});
+    created.push(panel);
+    created.push(createPaletteTextElement({name:'Título da paleta',text:paletteName,x:panelX+padX,y:panelY+padTop,w:panelW-padX*2,h:titleSize+12,fontSize:titleSize,fontWeight:800,textColor:'#151515',uppercase:true,letterSpacing:0.4}));
+    created.push(createPaletteTextElement({name:'Subtítulo da paleta',text:'Template de paleta de cores',x:panelX+padX,y:panelY+padTop+titleSize+6,w:panelW-padX*2,h:subtitleSize+10,fontSize:subtitleSize,fontWeight:500,textColor:'#6b665c'}));
+
+    palette.forEach((color,index)=>{
+      const row=Math.floor(index/columns);
+      const col=index%columns;
+      const x=startX+col*(swatchW+gap);
+      const y=startY+row*(swatchH+labelBlockH+gap);
+      const safe=normalizeHex(color);
+      created.push(createPaletteShapeElement({type:'roundRect',name:`Amostra ${index+1}`,x,y,w:swatchW,h:swatchH,fill:safe,strokeWidth:safe==='#ffffff'?1:0,strokeColor:'#d8d3ca',radius:Math.round(Math.min(swatchW,swatchH)*0.18)}));
+      created.push(createPaletteTextElement({name:`Rótulo ${index+1}`,text:roleLabels[index]||`Cor ${index+1}`,x,y:y+swatchH+8,w:swatchW,h:labelSize+8,fontSize:labelSize,fontWeight:700,textColor:'#151515',textAlign:'center'}));
+      created.push(createPaletteTextElement({name:`HEX ${index+1}`,text:safe.toUpperCase(),x,y:y+swatchH+8+labelSize+4,w:swatchW,h:hexSize+8,fontSize:hexSize,fontWeight:500,textColor:'#6b665c',textAlign:'center',uppercase:true,letterSpacing:0.2}));
+    });
+
+    state.elements.push(...created);
+    state.selectedIds=created.map(item=>item.id);
+    state.selectedId=state.selectedIds[0]||null;
+    pushHistory();
+    renderAll();
+    requestAnimationFrame(()=>fitZoom());
+    showToast('Template de paleta criado na prancheta',2600);
+    return true;
+  }
+
   function renderColorTemplates(){
     const listWrap=$('#colorTemplateList'),empty=$('#colorTemplateEmpty');
     if(!listWrap||!empty)return;
@@ -1381,9 +1481,10 @@
       const head=document.createElement('div');head.className='color-template-card-head';
       const title=document.createElement('strong');title.textContent=item.name;
       const actions=document.createElement('div');actions.className='color-template-card-actions';
+      const layout=document.createElement('button');layout.type='button';layout.textContent='Layout';layout.onclick=()=>insertColorPaletteTemplate(item.colors,item.name);
       const edit=document.createElement('button');edit.type='button';edit.textContent='Editar';edit.onclick=()=>editColorTemplate(item.id);
       const del=document.createElement('button');del.type='button';del.className='danger';del.textContent='Excluir';del.onclick=()=>deleteColorTemplate(item.id);
-      actions.append(edit,del);head.append(title,actions);
+      actions.append(layout,edit,del);head.append(title,actions);
 
       const swatches=document.createElement('div');swatches.className='color-template-swatches';
       item.colors.forEach(color=>{
@@ -1658,6 +1759,7 @@
   $('#captureProjectColorsBtn').addEventListener('click',captureProjectColors);
   $('#newColorTemplateBtn').addEventListener('click',newColorTemplate);
   $('#saveColorTemplateBtn').addEventListener('click',saveColorTemplate);
+  $('#insertColorPaletteTemplateBtn').addEventListener('click',()=>insertColorPaletteTemplate(colorTemplateDraft,$('#colorTemplateName')?.value));
 
   function setGradientAngle(v,commit=false){state.gradient.angle=clamp(v||0,0,360);$('#gradientAngle').value=state.gradient.angle;$('#gradientAngleNumber').value=state.gradient.angle;artboard.style.background=backgroundCss();setGradientPreviewBackground(gradientCss(state.gradient),false);markDirty();if(commit)pushHistory();}
   $('#gradientAngle').oninput=e=>setGradientAngle(e.target.value);$('#gradientAngle').onchange=()=>pushHistory();$('#gradientAngleNumber').oninput=e=>setGradientAngle(e.target.value);$('#gradientAngleNumber').onchange=e=>setGradientAngle(e.target.value,true);$('#addGradientStop').onclick=()=>{if(state.gradient.stops.length>=8){showToast('Máximo de 8 cores no gradiente');return;}const sorted=[...state.gradient.stops].sort((a,b)=>a.pos-b.pos);let pos=50,gap=-1,a=0,b=100;const all=[{pos:0},...sorted,{pos:100}];for(let i=0;i<all.length-1;i++){const g=all[i+1].pos-all[i].pos;if(g>gap){gap=g;a=all[i].pos;b=all[i+1].pos;}}pos=Math.round((a+b)/2);state.gradient.stops.push({color:'#ffffff',alpha:100,pos});pushHistory();renderAll();};
@@ -2078,7 +2180,7 @@
     return {
       contractVersion:'ronda-one-production-v2',
       source:'forma-direct-article',
-      sourceVersion:'0.9.7.5.21',
+      sourceVersion:'0.9.7.5.22',
       title,
       editoria:data?.editoria||'Notícias',
       slides:(data?.slides||[]).map((slide,index)=>({...slide,number:Number(slide.number)||index+1})),
