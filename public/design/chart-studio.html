@@ -39,7 +39,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 .app{height:100vh;display:grid;grid-template-rows:66px 1fr;background:var(--bg)}
 
-/* Embedded only inside FORMA DESIGN 0.9.7.5.20 */
+/* Embedded only inside FORMA DESIGN 0.9.7.5.21 */
 body{background:#d8d6d1}
 .app{height:100vh;grid-template-rows:1fr}
 .topbar{display:none!important}
@@ -78,6 +78,11 @@ body{background:#d8d6d1}
   box-shadow:0 6px 16px rgba(101,88,255,.18)
 }
 .btn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.export-select{
+  min-height:34px;border:1px solid var(--line-strong);background:#fff;color:var(--text);
+  border-radius:10px;padding:0 12px;font-size:12px;font-weight:650;outline:none;min-width:205px;
+}
+.export-select:focus{border-color:#bbb5ff;box-shadow:0 0 0 3px rgba(91,108,255,.14)}
 .btn.ghost{background:transparent;box-shadow:none}
 
 /* Main editor shell */
@@ -334,7 +339,7 @@ body.embed-mode .app{min-height:100vh}
       <div class="brand-copy">
         <div class="brand-line">
           <strong>FORMA DESIGN</strong>
-          <span class="version-badge">CHART STUDIO · v17.6</span>
+          <span class="version-badge">CHART STUDIO · v17.7</span>
         </div>
         <span class="brand-subtitle">Editor visual de gráficos</span>
       </div>
@@ -342,7 +347,16 @@ body.embed-mode .app{min-height:100vh}
     <div class="actions">
       <button class="btn ghost" id="resetPosBtn">Reenquadrar</button>
       <button class="btn" id="resetBtn">Restaurar exemplo</button>
-      <button class="btn primary" id="exportBtn">Exportar PNG</button>
+      <select id="exportFormat" class="export-select" aria-label="Formato de exportação">
+        <option value="png">PNG</option>
+        <option value="png-transparent" selected>PNG com transparência</option>
+        <option value="h264">H264</option>
+        <option value="webm">WEBM</option>
+        <option value="webm-transparent">WEBM com transparência</option>
+        <option value="webp">WEBP</option>
+        <option value="svg">SVG</option>
+      </select>
+      <button class="btn primary" id="exportBtn">Exportar</button>
       <button class="btn" id="insertFormaBtn" style="display:none">Inserir na prancheta</button>
     </div>
   </header>
@@ -550,7 +564,7 @@ Colômbia,27</textarea>
           <div class="field"><label>Fonte eixo Y · índice (px)</label><input id="yAxisFontSize" type="number" value="10" min="6" max="96" step="1"></div>
         </div>
 
-        <div class="field"><label>Título do eixo X</label><input id="xTitle" type="text" value="Categoria"></div>
+        <div class="field"><label>Título do eixo X</label><input id="xTitle" type="text" value=""></div>
         <div class="field">
           <label>Rótulos do eixo X</label>
           <select id="xLabelsMode">
@@ -573,7 +587,7 @@ Colômbia,27</textarea>
           </select>
         </div>
 
-        <div class="field"><label>Título do eixo Y</label><input id="yTitle" type="text" value="Valor"></div>
+        <div class="field"><label>Título do eixo Y</label><input id="yTitle" type="text" value=""></div>
         <div class="field">
           <label>Valores mostrados no eixo Y</label>
           <input id="yCustomTicks" type="text" value="0,50,100" placeholder="Ex.: 0,50,100">
@@ -3099,12 +3113,178 @@ function applyChartConfig(config){
   updateLineFillControls();
   restartAnimation(false);
 }
-function exportPNG(){
-  const built = buildExportCanvas();
+function downloadBlob(blob, fileName){
+  const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.download = 'grafico.png';
-  a.href = built.exportCanvas.toDataURL('image/png');
+  a.download = fileName;
+  a.href = url;
   a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 1200);
+}
+
+function sanitizeExportName(value){
+  const cleaned = String(value || 'grafico')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-zA-Z0-9_-]+/g,'-')
+    .replace(/^-+|-+$/g,'');
+  return cleaned || 'grafico';
+}
+
+function getChartExportBaseName(){
+  return sanitizeExportName(chartType || 'grafico');
+}
+
+function buildOpaqueCanvas(sourceCanvas, background = '#ffffff'){
+  const out = document.createElement('canvas');
+  out.width = sourceCanvas.width;
+  out.height = sourceCanvas.height;
+  const c = out.getContext('2d');
+  c.fillStyle = background;
+  c.fillRect(0, 0, out.width, out.height);
+  c.drawImage(sourceCanvas, 0, 0);
+  return out;
+}
+
+async function canvasToBlob(canvasEl, mimeType, quality){
+  return await new Promise((resolve, reject) => {
+    canvasEl.toBlob(blob => {
+      if(blob) resolve(blob);
+      else reject(new Error('Falha ao gerar o arquivo de exportação.'));
+    }, mimeType, quality);
+  });
+}
+
+function pickSupportedMime(candidates){
+  if(!window.MediaRecorder) return '';
+  for(const mime of candidates){
+    if(!mime) continue;
+    if(!MediaRecorder.isTypeSupported || MediaRecorder.isTypeSupported(mime)) return mime;
+  }
+  return '';
+}
+
+function wait(ms){
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function preserveAnimationSnapshot(){
+  return {
+    animationEnabled: state.animationEnabled,
+    animationPlaying: state.animationPlaying,
+    animationProgress: state.animationProgress,
+    animationStartTs: state.animationStartTs,
+    animationFrameId: state.animationFrameId
+  };
+}
+
+function restoreAnimationSnapshot(snapshot){
+  if(!snapshot) return;
+  cancelAnimationLoop();
+  state.animationEnabled = snapshot.animationEnabled;
+  state.animationPlaying = snapshot.animationPlaying;
+  state.animationProgress = snapshot.animationProgress;
+  state.animationStartTs = snapshot.animationStartTs;
+  state.animationFrameId = 0;
+  draw();
+  if(snapshot.animationPlaying){
+    state.animationStartTs = performance.now() - (state.animationProgress * getAnimationDuration());
+    state.animationFrameId = requestAnimationFrame(animationTick);
+  }
+}
+
+async function exportRasterImage({mimeType, extension, transparent=true, quality}){
+  const built = buildExportCanvas();
+  const sourceCanvas = transparent ? built.exportCanvas : buildOpaqueCanvas(built.exportCanvas);
+  const blob = await canvasToBlob(sourceCanvas, mimeType, quality);
+  downloadBlob(blob, getChartExportBaseName() + '.' + extension);
+}
+
+async function exportSvg(){
+  const built = buildExportCanvas();
+  const dataUrl = built.exportCanvas.toDataURL('image/png');
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${built.width}" height="${built.height}" viewBox="0 0 ${built.width} ${built.height}">
+  <image href="${dataUrl}" width="${built.width}" height="${built.height}" preserveAspectRatio="none"/>
+</svg>`;
+  downloadBlob(new Blob([svg], {type:'image/svg+xml;charset=utf-8'}), getChartExportBaseName() + '.svg');
+}
+
+async function exportVideo({transparent, extension, mimeCandidates}){
+  const mimeType = pickSupportedMime(mimeCandidates);
+  if(!mimeType) throw new Error(extension === 'mp4'
+    ? 'H264 não é suportado neste navegador para exportação direta.'
+    : 'WEBM não é suportado neste navegador para exportação direta.');
+
+  const snapshot = preserveAnimationSnapshot();
+  cancelAnimationLoop();
+  state.animationPlaying = false;
+
+  const seedBuilt = buildExportCanvas();
+  const recorderCanvas = document.createElement('canvas');
+  recorderCanvas.width = seedBuilt.exportCanvas.width;
+  recorderCanvas.height = seedBuilt.exportCanvas.height;
+  const recorderCtx = recorderCanvas.getContext('2d');
+  const fps = 30;
+  const stream = recorderCanvas.captureStream(fps);
+  const chunks = [];
+  const recorder = new MediaRecorder(stream, {mimeType, videoBitsPerSecond: 8_000_000});
+  recorder.ondataavailable = event => {
+    if(event.data && event.data.size) chunks.push(event.data);
+  };
+
+  const shouldRenderAnimation = shouldAnimate();
+  const duration = shouldRenderAnimation ? getAnimationDuration() : 1000;
+
+  const drawFrame = (progress) => {
+    state.animationEnabled = shouldRenderAnimation;
+    state.animationProgress = shouldRenderAnimation ? clamp(progress, 0, 1) : 1;
+    draw();
+    const built = buildExportCanvas();
+    recorderCtx.clearRect(0, 0, recorderCanvas.width, recorderCanvas.height);
+    if(!transparent){
+      recorderCtx.fillStyle = '#ffffff';
+      recorderCtx.fillRect(0, 0, recorderCanvas.width, recorderCanvas.height);
+    }
+    recorderCtx.drawImage(built.exportCanvas, 0, 0, recorderCanvas.width, recorderCanvas.height);
+  };
+
+  recorder.start();
+  const start = performance.now();
+  await new Promise(resolve => {
+    function step(now){
+      const elapsed = now - start;
+      const progress = duration <= 0 ? 1 : Math.min(1, elapsed / duration);
+      drawFrame(progress);
+      if(progress >= 1){
+        wait(220).then(resolve);
+        return;
+      }
+      requestAnimationFrame(step);
+    }
+    drawFrame(0);
+    requestAnimationFrame(step);
+  });
+
+  await new Promise(resolve => {
+    recorder.onstop = resolve;
+    recorder.stop();
+  });
+
+  restoreAnimationSnapshot(snapshot);
+  downloadBlob(new Blob(chunks, {type: mimeType}), getChartExportBaseName() + '.' + extension);
+}
+
+async function exportSelectedFormat(){
+  const format = $('exportFormat')?.value || 'png-transparent';
+  if(format === 'png') return exportRasterImage({mimeType:'image/png', extension:'png', transparent:false});
+  if(format === 'png-transparent') return exportRasterImage({mimeType:'image/png', extension:'png', transparent:true});
+  if(format === 'webp') return exportRasterImage({mimeType:'image/webp', extension:'webp', transparent:true, quality:0.96});
+  if(format === 'svg') return exportSvg();
+  if(format === 'webm') return exportVideo({transparent:false, extension:'webm', mimeCandidates:['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']});
+  if(format === 'webm-transparent') return exportVideo({transparent:true, extension:'webm', mimeCandidates:['video/webm;codecs=vp9','video/webm']});
+  if(format === 'h264') return exportVideo({transparent:false, extension:'mp4', mimeCandidates:['video/mp4;codecs=h264','video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=h264']});
+  return exportRasterImage({mimeType:'image/png', extension:'png', transparent:true});
 }
 function insertIntoForma(){
   const built = buildExportCanvas();
@@ -3222,7 +3402,9 @@ $('resetPosBtn').addEventListener('click', () => {
   applyChartBox();
 });
 $('resetBtn').addEventListener('click', () => location.reload());
-$('exportBtn').addEventListener('click', exportPNG);
+$('exportBtn').addEventListener('click', () => {
+  exportSelectedFormat().catch(error => alert(error?.message || 'Falha ao exportar o gráfico.'));
+});
 $('insertFormaBtn').addEventListener('click', insertIntoForma);
 
 $('playAnimBtn').addEventListener('click', () => playAnimation());
