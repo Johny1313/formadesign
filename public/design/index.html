@@ -298,8 +298,9 @@
 #chartStudioModalFrame{width:100%;height:100%;border:0;display:block;background:#fff}
 .chart-studio-modal-foot{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:10px}
 .chart-studio-modal-foot span{font-size:8px;line-height:1.45;color:var(--muted)}
-.canvas-el.chart-element .el-content{object-fit:contain;background:#fff}
-@media(max-width:900px){.chart-tool-actions{grid-template-columns:1fr}.modal.chart-studio-modal{width:min(100vw - 18px,1240px);padding:10px}.chart-studio-frame-wrap{height:74vh}.chart-studio-modal-foot{flex-direction:column;align-items:flex-start}}
+.chart-modal-actions{display:flex;align-items:center;gap:8px;flex:none}
+.canvas-el.chart-element .el-content{object-fit:contain;background:transparent}
+@media(max-width:900px){.chart-tool-actions{grid-template-columns:1fr}.modal.chart-studio-modal{width:min(100vw - 18px,1240px);padding:10px}.chart-studio-frame-wrap{height:74vh}.chart-studio-modal-foot{flex-direction:column;align-items:flex-start}.chart-modal-actions{width:100%;display:grid;grid-template-columns:1fr 1fr}}
 </style>
 
 </head>
@@ -309,7 +310,7 @@
       <div class="brand-wrap">
         <div class="brand-mark">F</div>
         <div>
-          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.11</b></div>
+          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.14</b></div>
           <div class="brand-sub">Editor visual de design, conteúdo e gráficos</div>
         </div>
       </div>
@@ -611,7 +612,7 @@
                 <button class="secondary-btn" id="editSelectedChartBtn" type="button" disabled>Editar gráfico selecionado</button>
               </div>
             </div>
-            <div class="chart-tool-note" style="margin-top:10px">Ao inserir, o gráfico entra na prancheta atual como um elemento integrado do design. Se você selecionar um gráfico já inserido, poderá voltar ao editor para atualizá-lo.</div>
+            <div class="chart-tool-note" style="margin-top:10px">Ao inserir, o gráfico entra na prancheta ativa como uma camada do próprio design. O Chart Studio fecha e você continua usando normalmente Texto, Formas, Uploads, Fundo, Camadas e todas as ferramentas do FORMA. Se precisar, selecione o gráfico e use “Editar no Chart Studio”.</div>
           </div>
 
           <div class="panel-page" data-page="background">
@@ -748,8 +749,9 @@
               <label class="field-label">Ajuste da imagem</label><select id="propObjectFit"><option value="cover">Preencher</option><option value="contain">Conter</option></select>
               <label class="secondary-btn full file-btn">Substituir imagem<input type="file" id="replaceImage" accept="image/*" hidden /></label>
               <div id="chartElementTools" class="chart-element-tools hidden">
+                <div class="chart-badge">Gráfico · camada integrada</div>
                 <button class="primary-soft full" id="editChartElementBtn" type="button">Editar no Chart Studio</button>
-                <div class="chart-element-note">Este elemento foi inserido pelo Chart Studio e continua integrado à prancheta como parte do layout.</div>
+                <div class="chart-element-note">Você pode mover, redimensionar, duplicar, organizar nas camadas e combinar este gráfico com textos, formas, imagens e fundos normalmente.</div>
               </div>
               <div class="upscale-box"><strong>Upscale HQ</strong><p>Aumenta a resolução da imagem mantendo o tamanho do elemento no design e aplica nitidez leve.</p><div class="upscale-actions"><select id="upscaleFactor"><option value="2">2×</option><option value="4">4×</option></select><button type="button" class="primary-soft upscale-btn" id="upscaleImageBtn">Melhorar qualidade</button></div><div class="upscale-status" id="upscaleImageStatus"></div></div>
               <button class="remove-bg-btn" id="removeBgBtn">✦ Remover fundo</button>
@@ -807,8 +809,11 @@
         <iframe id="chartStudioModalFrame" src="./chart-studio.html?embed=1" title="Chart Studio integrado"></iframe>
       </div>
       <div class="chart-studio-modal-foot">
-        <span>O gráfico inserido vira um elemento do design e acompanha exportação, duplicação, organização de camadas e redimensionamento.</span>
-        <button class="secondary-btn" data-close-modal="chartStudioModal" type="button">Fechar</button>
+        <span>O gráfico é inserido diretamente na prancheta ativa e continua editável dentro do layout. Você pode voltar para Texto, Uploads, Formas, Fundo e demais recursos normalmente.</span>
+        <div class="chart-modal-actions">
+          <button class="primary-btn" id="chartStudioInsertBtn" type="button">Inserir no FORMA</button>
+          <button class="secondary-btn" data-close-modal="chartStudioModal" type="button">Fechar</button>
+        </div>
       </div>
     </div>
   </div>
@@ -966,7 +971,7 @@
   function markSaved(){state.dirty=false;$('#savedStatus').textContent='salvo';$('#savedStatus').classList.remove('dirty');}
   function showToast(msg,ms=1900){toast.textContent=msg;toast.classList.add('show');clearTimeout(showToast.t);showToast.t=setTimeout(()=>toast.classList.remove('show'),ms);}
   function openModal(id){$('#'+id).classList.remove('hidden');}
-  function closeModal(id){$('#'+id).classList.add('hidden');if(id==='chartStudioModal')pendingChartTargetId=null;}
+  function closeModal(id){$('#'+id).classList.add('hidden');if(id==='chartStudioModal'){pendingChartTargetId=null;syncChartModalActionLabel();}}
   const CAROUSEL_SLIDE_MIN=3,CAROUSEL_SLIDE_MAX=15;
   let slideCountChoiceResolve=null,slideCountChoiceValue=7;
   function normalizeCarouselSlideChoice(value){const n=Number(value);return Number.isInteger(n)&&n>=CAROUSEL_SLIDE_MIN&&n<=CAROUSEL_SLIDE_MAX?n:null;}
@@ -1050,15 +1055,15 @@
     const width=Math.max(1,Number(payload.width)||Number(payload.formatW)||1080),height=Math.max(1,Number(payload.height)||Number(payload.formatH)||1080),replaceId=pendingChartTargetId||null;
     let el=replaceId?state.elements.find(item=>item.id===replaceId):null;
     if(el&&isChartElement(el)){
-      el.src=payload.pngDataUrl;el.originalSrc=null;el.objectFit='contain';el.sourceWidth=width;el.sourceHeight=height;el.chartConfig=payload.config||null;el.chartMeta={updatedAt:new Date().toISOString(),chartType:payload.chartType||null,formatW:payload.formatW||width,formatH:payload.formatH||height};el.name=payload.name||el.name||'Gráfico';selectOnly(el.id);pendingChartTargetId=null;pushHistory();renderAll();showToast('Gráfico atualizado na prancheta');closeModal('chartStudioModal');return;
+      el.src=payload.pngDataUrl;el.originalSrc=null;el.objectFit='contain';el.sourceWidth=width;el.sourceHeight=height;el.chartConfig=payload.config||null;el.chartMeta={updatedAt:new Date().toISOString(),chartType:payload.chartType||null,formatW:payload.formatW||width,formatH:payload.formatH||height};el.name=payload.name||el.name||'Gráfico';selectOnly(el.id);pendingChartTargetId=null;pushHistory();renderAll();showToast('Gráfico atualizado na prancheta');activateToolPanel(lastNonChartPanel||'project');closeModal('chartStudioModal');return;
     }
     const geometry=baseChartElementGeometry(width,height);
     el={id:uid(),type:'image',assetKind:'chart',name:payload.name||'Gráfico',x:geometry.x,y:geometry.y,w:geometry.w,h:geometry.h,rotation:0,opacity:100,locked:false,visible:true,src:payload.pngDataUrl,originalSrc:null,objectFit:'contain',sourceWidth:width,sourceHeight:height,chartConfig:payload.config||null,chartMeta:{createdAt:new Date().toISOString(),chartType:payload.chartType||null,formatW:payload.formatW||width,formatH:payload.formatH||height}};
-    state.elements.push(el);selectOnly(el.id);pendingChartTargetId=null;pushHistory();renderAll();showToast('Gráfico inserido na prancheta');closeModal('chartStudioModal');
+    state.elements.push(el);selectOnly(el.id);pendingChartTargetId=null;pushHistory();renderAll();showToast('Gráfico inserido na prancheta');activateToolPanel(lastNonChartPanel||'project');closeModal('chartStudioModal');
   }
   function sendChartOpenPayload(){const frame=$('#chartStudioModalFrame');if(!frame||!frame.contentWindow)return;const target=pendingChartTargetId?state.elements.find(item=>item.id===pendingChartTargetId):null;frame.contentWindow.postMessage({type:'forma-chart-open',payload:{formatW:state.width,formatH:state.height,elementName:target?.name||'Gráfico',config:(target&&isChartElement(target)&&target.chartConfig)?target.chartConfig:null}},'*');}
-  function openChartStudioForNewElement(){pendingChartTargetId=null;openModal('chartStudioModal');if(chartFrameReady)setTimeout(sendChartOpenPayload,20);}
-  function openChartStudioForSelection(){const target=activeChartElement();if(!target){showToast('Selecione um gráfico inserido na prancheta');return;}pendingChartTargetId=target.id;openModal('chartStudioModal');if(chartFrameReady)setTimeout(sendChartOpenPayload,20);}
+  function openChartStudioForNewElement(){pendingChartTargetId=null;syncChartModalActionLabel();openModal('chartStudioModal');if(chartFrameReady)setTimeout(sendChartOpenPayload,20);}
+  function openChartStudioForSelection(){const target=activeChartElement();if(!target){showToast('Selecione um gráfico inserido na prancheta');return;}pendingChartTargetId=target.id;syncChartModalActionLabel();openModal('chartStudioModal');if(chartFrameReady)setTimeout(sendChartOpenPayload,20);}
   window.addEventListener('message',event=>{const data=event.data||{};if(data.type==='forma-chart-ready'){chartFrameReady=true;if(!$('#chartStudioModal')?.classList.contains('hidden'))setTimeout(sendChartOpenPayload,20);return;}if(data.type==='forma-chart-insert')insertOrUpdateChartElement(data.payload||null);});
 
   function fitZoom(){
@@ -1590,8 +1595,25 @@
   stageViewport.addEventListener('auxclick',ev=>{if(ev.button===1)ev.preventDefault();});
   stageViewport.addEventListener('wheel',ev=>{if(!(ev.ctrlKey||ev.metaKey))return;ev.preventDefault();setZoom(state.zoom*(ev.deltaY<0?1.12:.89));},{passive:false});
 
-  $$('.tool-tab').forEach(btn=>btn.onclick=()=>{$$('.tool-tab').forEach(b=>b.classList.remove('active'));btn.classList.add('active');$$('.panel-page').forEach(p=>p.classList.toggle('active',p.dataset.page===btn.dataset.panel));});
-  $('#createChartElementBtn').addEventListener('click',openChartStudioForNewElement);$('#editSelectedChartBtn').addEventListener('click',openChartStudioForSelection);$('#editChartElementBtn').addEventListener('click',openChartStudioForSelection);$('#chartStudioModalFrame').addEventListener('load',()=>{chartFrameReady=true;sendChartOpenPayload();});
+  let lastNonChartPanel='project';
+  function activateToolPanel(panel){
+    $$('.tool-tab').forEach(b=>b.classList.toggle('active',b.dataset.panel===panel));
+    $$('.panel-page').forEach(p=>p.classList.toggle('active',p.dataset.page===panel));
+    if(panel&&panel!=='charts')lastNonChartPanel=panel;
+  }
+  $$('.tool-tab').forEach(btn=>btn.onclick=()=>activateToolPanel(btn.dataset.panel));
+  function syncChartModalActionLabel(){
+    const btn=$('#chartStudioInsertBtn');
+    if(!btn)return;
+    btn.textContent=pendingChartTargetId?'Atualizar na prancheta':'Inserir no FORMA';
+  }
+  function requestChartInsertion(){
+    const frame=$('#chartStudioModalFrame');
+    if(!frame||!frame.contentWindow){showToast('Chart Studio ainda está carregando');return;}
+    frame.contentWindow.postMessage({type:'forma-chart-request-insert'},'*');
+  }
+  $('#chartStudioInsertBtn').addEventListener('click',requestChartInsertion);
+  $('#createChartElementBtn').addEventListener('click',openChartStudioForNewElement);$('#editSelectedChartBtn').addEventListener('click',openChartStudioForSelection);$('#editChartElementBtn').addEventListener('click',openChartStudioForSelection);$('#chartStudioModalFrame').addEventListener('load',()=>{chartFrameReady=true;sendChartOpenPayload();syncChartModalActionLabel();});
   $$('[data-add-text]').forEach(b=>b.onclick=()=>addText(b.dataset.addText));$$('[data-shape]').forEach(b=>b.onclick=()=>addShape(b.dataset.shape));$$('[data-mask]').forEach(b=>b.onclick=()=>addMask(b.dataset.mask));
 
   function readFile(file){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file);});}
@@ -1707,10 +1729,26 @@
   async function loadGifs(mode='search'){let q=$('#gifSearch').value.trim();if(q.length>50){q=q.slice(0,50);$('#gifSearch').value=q;}if(mode==='search'&&!q){showToast('Digite um termo para buscar GIFs');return;}const btn=mode==='search'?$('#gifSearchBtn'):$('#gifTrendingBtn'),old=btn.textContent;btn.disabled=true;btn.textContent='Carregando…';try{const params={limit:'24',rating:'g'};if(mode==='search'){params.q=q;params.lang='pt';}const j=await giphyRequest(mode,params);state.gifResults=Array.isArray(j.data)?j.data:[];state.gifQuery=q;renderGifResults();if(!state.gifResults.length)showToast('O GIPHY não retornou resultados para esta busca',2200);}catch(err){showToast(`GIPHY: ${err.message||'falha na busca'}`,3400);}finally{btn.disabled=false;btn.textContent=old;}}
   $('#gifSearchBtn').onclick=()=>loadGifs('search');$('#gifTrendingBtn').onclick=()=>loadGifs('trending');$('#gifSearch').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();loadGifs('search');}});
 
-  async function dataUrlToBlob(src){const r=await fetch(proxyExternalAsset(src));if(!r.ok)throw new Error(`Imagem respondeu HTTP ${r.status}`);return await r.blob();}
+  const FORMA_REMOVEBG_BROWSER_FALLBACK_KEY='7k34KuZDw8kqzyXPnYpMDMSE';
+  async function fetchBlobCandidate(src){
+    const raw=String(src||'').trim();if(!raw)throw new Error('Imagem sem origem válida.');
+    const candidates=[];const add=value=>{if(value&&!candidates.includes(value))candidates.push(value);};add(proxyExternalAsset(raw));add(raw);
+    let lastError=null;
+    for(const url of candidates){try{const r=await fetch(url,{cache:'no-store'});if(!r.ok){lastError=new Error(`Imagem respondeu HTTP ${r.status}`);continue;}const blob=await r.blob();if(!blob?.size){lastError=new Error('Imagem retornou vazia.');continue;}if(blob.type&&!blob.type.startsWith('image/')){lastError=new Error('O arquivo retornado não é uma imagem.');continue;}return blob;}catch(err){lastError=err;}}
+    throw lastError||new Error('Não foi possível carregar a imagem.');
+  }
+  async function elementImageBlob(el){const sources=[el?.src,el?.originalSrc].filter(Boolean);let lastError=null;for(const src of sources){try{return await fetchBlobCandidate(src);}catch(err){lastError=err;}}throw lastError||new Error('Este elemento ainda não tem imagem utilizável.');}
   async function blobToDataUrl(blob){return await new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(blob);});}
+  function removeBgForm(blob){const form=new FormData();const ext=blob.type==='image/jpeg'?'jpg':blob.type==='image/webp'?'webp':'png';form.append('image_file',blob,`imagem.${ext}`);form.append('size','auto');return form;}
+  async function removeBgError(response){let detail='';try{const j=await response.json();detail=j?.error||j?.detail||j?.errors?.[0]?.title||j?.errors?.[0]?.detail||'';}catch{try{detail=(await response.text()).slice(0,240);}catch{}}return new Error(detail||`Remove.bg respondeu HTTP ${response.status}`);}
+  async function removeBgDirect(blob){const response=await fetch('https://api.remove.bg/v1.0/removebg',{method:'POST',headers:{'X-Api-Key':FORMA_REMOVEBG_BROWSER_FALLBACK_KEY},body:removeBgForm(blob),mode:'cors',cache:'no-store'});if(!response.ok)throw await removeBgError(response);const out=await response.blob();if(!out?.size)throw new Error('Remove.bg retornou uma imagem vazia.');return out;}
+  async function removeBgRequest(blob){try{const response=await fetch('/api/remove-bg',{method:'POST',credentials:'same-origin',cache:'no-store',body:removeBgForm(blob)});if(response.ok){const out=await response.blob();if(!out?.size)throw new Error('O servidor retornou uma imagem vazia.');return {blob:out,mode:'backend'};}if([404,405,501].includes(response.status))return {blob:await removeBgDirect(blob),mode:'direct'};throw await removeBgError(response);}catch(err){if(err instanceof TypeError)return {blob:await removeBgDirect(blob),mode:'direct'};throw err;}}
   async function removeBgForElement(el,button){
-    const src=el?.src;if(!src){showToast('Este elemento ainda não tem imagem');return;}button.classList.add('busy');button.disabled=true;const old=button.textContent;button.textContent='Processando…';try{const blob=await dataUrlToBlob(src),form=new FormData();form.append('image_file',blob,'imagem.png');form.append('size','auto');const response=await fetch('/api/remove-bg',{method:'POST',credentials:'same-origin',body:form});if(!response.ok){let detail='';try{const j=await response.json();detail=j?.error||j?.detail||'';}catch{}throw new Error(detail||`Erro ${response.status}`);}const out=await response.blob(),data=await blobToDataUrl(out);el.src=data;if(el.type==='mask')await setMaskImage(el,data);state.uploads.unshift({name:'remove-bg.png',src:data});pushHistory();renderAll();showToast('Fundo removido');}catch(err){showToast(`Remover fundo: ${err.message||'falha na requisição'}`,3200);}finally{button.classList.remove('busy');button.disabled=false;button.textContent=old;}}
+    if(!el?.src&&!el?.originalSrc){showToast('Este elemento ainda não tem imagem');return;}
+    button.classList.add('busy');button.disabled=true;const old=button.textContent;button.textContent='Processando…';
+    try{const sourceBlob=await elementImageBlob(el);if(sourceBlob.size>12*1024*1024)throw new Error('Imagem acima do limite de 12 MB.');const result=await removeBgRequest(sourceBlob);const data=await blobToDataUrl(result.blob);if(el.type==='mask'){await setMaskImage(el,data);}else{el.src=data;el.originalSrc=null;try{const size=await imageNaturalSize(data);if(size){el.sourceWidth=size.w;el.sourceHeight=size.h;}}catch{}}state.uploads.unshift({name:'remove-bg.png',src:data});pushHistory();renderAll();showToast(result.mode==='direct'?'Fundo removido · conexão direta':'Fundo removido');}
+    catch(err){showToast(`Remover fundo: ${err?.message||'falha na requisição'}`,4200);}finally{button.classList.remove('busy');button.disabled=false;button.textContent=old;}
+  }
   function productionTaskId(){return state.platformMeta?.productionTaskId||state.platformMeta?.editorialEventId||null;}
   function directProductionTaskId(){const raw=String(directArticleState.lastJobId||state.platformMeta?.jobId||'').replace(/[^a-zA-Z0-9-]/g,'').slice(0,110);return raw?`forma-${raw}`:`forma-${Date.now()}`;}
   async function updateProductionTask(action,payload={}, {silent=false}={}){

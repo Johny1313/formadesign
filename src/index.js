@@ -59,10 +59,10 @@ export default {
       return json({
         ok:true,
         product:'FORMA DESIGN',
-        version:'0.9.7.5.11',
+        version:'0.9.7.5.14',
         chartStudio:true,
         giphy:true,
-        removeBg:!!env.REMOVEBG_API_KEY,
+        removeBg:true,removeBgMode:env.REMOVEBG_API_KEY?'environment':'bundled-fallback',
         workersAi:!!env.AI,
         projects:!!env.DB
       });

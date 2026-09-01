@@ -1,4 +1,4 @@
-# FORMA DESIGN 0.9.7.5.11
+# FORMA DESIGN 0.9.7.5.14
 
 Projeto independente do editor FORMA DESIGN.
 
@@ -79,3 +79,29 @@ A exclusão múltipla também é suportada. Campos de texto, inputs e edição i
 - Não é criada uma nova prancheta para usar gráficos.
 - O elemento de gráfico pode ser movido, redimensionado, duplicado, organizado em camadas e exportado junto com o layout.
 - Elementos inseridos pelo Chart Studio ficam marcados como `assetKind: "chart"` e podem ser reabertos no editor de gráficos.
+
+
+## Ajuste de espessura inicial da linha — v0.9.7.5.12
+
+- A espessura inicial da linha no Chart Studio foi reduzida para **1 px**.
+- Isso vale para o controle de linha usado nos gráficos de **linha** e **área** ao abrir a ferramenta.
+- O ajuste manual continua disponível normalmente.
+
+
+## Inserção de gráfico na prancheta — v0.9.7.5.13
+
+- O modal do Chart Studio agora tem um botão externo e visível: **Inserir no FORMA**.
+- Esse botão envia o gráfico diretamente para a **prancheta ativa**.
+- Depois de inserir ou atualizar, o FORMA volta automaticamente para a última aba normal de edição.
+- O gráfico continua na prancheta como um elemento integrado do design.
+- O elemento pode ser selecionado novamente e reaberto no Chart Studio para nova edição.
+
+
+## Remove BG — v0.9.7.5.14
+
+- Corrigido para imagens locais, externas, GIPHY e assets via proxy.
+- Tenta primeiro `/api/remove-bg` no Worker.
+- Em preview/local, 404/405/501 ou falha de rede acionam fallback direto para a API remove.bg.
+- O elemento permanece na mesma posição, tamanho e camada da prancheta.
+- Máscaras recebem a imagem processada sem perder o elemento.
+- Mensagens de erro preservam o motivo retornado pela API.

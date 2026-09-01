@@ -343,7 +343,7 @@ body.embed-mode .app{min-height:100vh}
       <button class="btn ghost" id="resetPosBtn">Reenquadrar</button>
       <button class="btn" id="resetBtn">Restaurar exemplo</button>
       <button class="btn primary" id="exportBtn">Exportar PNG</button>
-      <button class="btn" id="insertFormaBtn" style="display:none">Inserir no FORMA</button>
+      <button class="btn" id="insertFormaBtn" style="display:none">Inserir na prancheta</button>
     </div>
   </header>
 
@@ -480,7 +480,7 @@ Colômbia,27</textarea>
         <div class="switchline"><label>Suavizar curvas</label><label class="switch"><input id="smoothCurves" type="checkbox"><span class="slider"></span></label></div>
         <div class="row">
           <div class="field"><label>Cor do preenchimento</label><input id="areaColor" type="color" value="#5b6cff"></div>
-          <div class="field"><label>Espessura da linha</label><input id="areaLineWidth" type="number" value="3" min="1" max="20" step="1"></div>
+          <div class="field"><label>Espessura da linha</label><input id="areaLineWidth" type="number" value="1" min="1" max="20" step="1"></div>
         </div>
         <div class="row">
           <div class="field"><label>Opacidade do preenchimento (%)</label><input id="areaFillOpacity" type="number" value="14" min="0" max="100" step="1"></div>
@@ -2898,6 +2898,7 @@ function insertIntoForma(){
 }
 window.addEventListener('message', event => {
   const data = event.data || {};
+  if(data.type === 'forma-chart-request-insert'){ insertIntoForma(); return; }
   if(data.type !== 'forma-chart-open') return;
   const payload = data.payload || {};
   if(payload.formatW && payload.formatH && !payload.config){

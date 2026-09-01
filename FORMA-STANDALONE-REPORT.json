@@ -1,6 +1,6 @@
 {
   "product": "FORMA DESIGN",
-  "version": "0.9.7.5.11",
+  "version": "0.9.7.5.14",
   "ronda_one_in_project": false,
   "projects_page_or_tab": false,
   "save_project_function": true,
@@ -99,5 +99,33 @@
     "chart_asset_kind": "chart",
     "reopen_chart_editor": true,
     "chart_studio_embed_modal": true
+  },
+  "chart_line_defaults": {
+    "areaLineWidth_initial_px": 1,
+    "applies_to": [
+      "line chart",
+      "area chart"
+    ]
+  },
+  "chart_insert_flow": {
+    "outer_modal_insert_button": true,
+    "insert_target": "active artboard",
+    "returns_to_last_non_chart_panel": true,
+    "chart_remains_integrated_element": true,
+    "reopen_for_edit": true,
+    "return_to_editor_after_insert": true,
+    "all_normal_tools_accessible_after_insert": true,
+    "selected_chart_reopens_chart_studio": true,
+    "same_active_artboard": true
+  },
+  "remove_bg_fix": {
+    "backend_first": true,
+    "browser_fallback_on_missing_route": true,
+    "supports_local": true,
+    "supports_external": true,
+    "supports_proxy": true,
+    "supports_original_src": true,
+    "preserves_artboard_element": true,
+    "mask_support": true
   }
 }
