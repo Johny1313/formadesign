@@ -475,15 +475,15 @@ Colômbia,27</textarea>
       </div>
 
       <div class="section">
-        <div class="section-head"><strong>Linha e preenchimento</strong><span class="hint">traço, área e pontos</span></div>
+        <div class="section-head"><strong>Stroke e preenchimento</strong><span class="hint">linha = traço sem fill · área = fill opcional</span></div>
         <div class="switchline"><label>Ocultar pontos</label><label class="switch"><input id="hideLinePoints" type="checkbox"><span class="slider"></span></label></div>
         <div class="switchline"><label>Suavizar curvas</label><label class="switch"><input id="smoothCurves" type="checkbox"><span class="slider"></span></label></div>
         <div class="row">
-          <div class="field"><label>Cor do preenchimento</label><input id="areaColor" type="color" value="#5b6cff"></div>
-          <div class="field"><label>Espessura da linha</label><input id="areaLineWidth" type="number" value="1" min="1" max="20" step="1"></div>
+          <div class="field" id="areaFillColorField"><label>Cor do preenchimento</label><input id="areaColor" type="color" value="#5b6cff"></div>
+          <div class="field"><label>Stroke (px)</label><input id="areaLineWidth" type="number" value="1" min="0.25" max="20" step="0.25"></div>
         </div>
         <div class="row">
-          <div class="field"><label>Opacidade do preenchimento (%)</label><input id="areaFillOpacity" type="number" value="14" min="0" max="100" step="1"></div>
+          <div class="field" id="areaFillOpacityField"><label>Opacidade do preenchimento (%)</label><input id="areaFillOpacity" type="number" value="14" min="0" max="100" step="1"></div>
           <div class="field"><label>Opacidade da linha (%)</label><input id="areaLineOpacity" type="number" value="100" min="0" max="100" step="1"></div>
         </div>
       </div>
@@ -1890,7 +1890,16 @@ function formatRankLabel(rank){
   return `${n}º`;
 }
 
+function updateLineFillControls(){
+  const isArea = chartType === 'area';
+  const fillColorField = $('areaFillColorField');
+  const fillOpacityField = $('areaFillOpacityField');
+  if(fillColorField) fillColorField.style.display = isArea ? '' : 'none';
+  if(fillOpacityField) fillOpacityField.style.display = isArea ? '' : 'none';
+}
+
 function draw(){
+  updateLineFillControls();
   const rect = canvas.getBoundingClientRect();
   const w = rect.width, h = rect.height;
   ctx.clearRect(0,0,w,h);
@@ -2145,7 +2154,7 @@ function drawLine(data, w, h, axis, hideValues, fillArea, progress){
   if(!pts.length) return;
 
   let lineColor = $('globalColor').value;
-  let lineWidth = Math.max(1, +$('areaLineWidth').value || 1);
+  let lineWidth = Math.max(0.25, +$('areaLineWidth').value || 1);
   let fillColor = 'rgba(91,108,255,.14)';
 
   if(fillArea){
@@ -2441,7 +2450,7 @@ function drawLineRace(dataset, w, h, progress){
   const innerH = Math.max(20, h - pad.top - pad.bottom);
   const hidePoints = $('hideLinePoints').checked;
   const smooth = $('smoothCurves').checked;
-  const lineWidth = Math.max(1, +$('areaLineWidth').value || 1);
+  const lineWidth = Math.max(0.25, +$('areaLineWidth').value || 1);
   const xCount = dataset.xLabels.length;
   const fullX = idx => pad.left + (xCount === 1 ? innerW / 2 : idx * innerW / (xCount - 1));
   const yFromRank = rank => {
@@ -2641,7 +2650,7 @@ function drawRadar(data, w, h, progress){
   c.closePath();
   c.fillStyle = hexToRgba($('areaColor').value, Math.max(0, Math.min(100, +$('areaFillOpacity').value || 14)) / 100);
   c.strokeStyle = hexToRgba($('areaColor').value, Math.max(0, Math.min(100, +$('areaLineOpacity').value || 100)) / 100);
-  c.lineWidth = Math.max(1, +$('areaLineWidth').value || 1);
+  c.lineWidth = Math.max(0.25, +$('areaLineWidth').value || 1);
   c.fill();
   c.stroke();
 
@@ -2785,8 +2794,6 @@ function buildExportCanvas(){
   exportCanvas.height = Math.round(rect.height * dpr);
   const ex = exportCanvas.getContext('2d');
   ex.scale(dpr,dpr);
-  ex.fillStyle = '#ffffff';
-  ex.fillRect(0,0,rect.width,rect.height);
   const chartRect = $('chartBox').getBoundingClientRect();
   const stageRect = stage.getBoundingClientRect();
   ex.drawImage(canvas, chartRect.left-stageRect.left, chartRect.top-stageRect.top, chartRect.width, chartRect.height);
@@ -2882,6 +2889,7 @@ function applyChartConfig(config){
     setFormat('custom');
   }
   renderItemList();
+  updateLineFillControls();
   restartAnimation(false);
 }
 function exportPNG(){
@@ -2928,6 +2936,7 @@ document.querySelectorAll('.type').forEach(btn => btn.addEventListener('click', 
   document.querySelectorAll('.type').forEach(x => x.classList.remove('active'));
   btn.classList.add('active');
   chartType = btn.dataset.type;
+  updateLineFillControls();
   restartAnimation(true);
 }));
 document.querySelectorAll('.format-btn').forEach(btn => btn.addEventListener('click', () => setFormat(btn.dataset.format)));
