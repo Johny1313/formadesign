@@ -15,6 +15,7 @@ const IMAGE_MODELS = {
     label: 'FLUX.2 Klein 4B',
   },
 };
+const FORMA_GIPHY_FALLBACK_KEY = 'CIpNE3NWFRaDgMNSdQqIAMRd85vkBNFp';
 const TEXT_MODEL = '@cf/zai-org/glm-4.7-flash';
 const ENGINE_VERSION = '0.7.4-multi-image-engine';
 const BUILD_ID = '074-MULTI-IMAGE-20260825';
@@ -367,11 +368,12 @@ async function analyzeArticle(env, input) {
 }
 
 async function giphyProxy(request, env, mode) {
-  if (!env.GIPHY_API_KEY) return json({ ok: false, error: 'GIPHY_API_KEY ainda não configurada no Worker' }, 503);
+  const giphyKey = env.GIPHY_API_KEY || FORMA_GIPHY_FALLBACK_KEY;
+  if (!giphyKey) return json({ ok: false, error: 'GIPHY_API_KEY ainda não configurada no Worker' }, 503);
   const url = new URL(request.url);
   const limit = Math.min(50, Math.max(1, Number(url.searchParams.get('limit')) || 24));
   const rating = url.searchParams.get('rating') || 'g';
-  const qs = new URLSearchParams({ api_key: env.GIPHY_API_KEY, limit: String(limit), rating });
+  const qs = new URLSearchParams({ api_key: giphyKey, limit: String(limit), rating });
   if (mode === 'search') {
     const q = (url.searchParams.get('q') || '').trim().slice(0, 50);
     if (!q) return json({ ok: false, error: 'Busca vazia' }, 400);

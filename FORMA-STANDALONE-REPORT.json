@@ -1,6 +1,6 @@
 {
   "product": "FORMA DESIGN",
-  "version": "0.9.7.5.6",
+  "version": "0.9.7.5.9",
   "ronda_one_in_project": false,
   "projects_page_or_tab": false,
   "save_project_function": true,
@@ -34,5 +34,52 @@
     "projects_page_removed": true,
     "chart_studio_left_menu": true
   },
-  "compatibility_note": "Identificadores internos históricos de projetos/templates podem permanecer para leitura de conteúdo salvo antigo; não existe aplicação, rota ou pasta Ronda One neste pacote."
+  "compatibility_note": "Identificadores internos históricos de projetos/templates podem permanecer para leitura de conteúdo salvo antigo; não existe aplicação, rota ou pasta Ronda One neste pacote.",
+  "giphy": {
+    "backend_route": "/api/giphy/search + /api/giphy/trending",
+    "backend_fallback_key": true,
+    "browser_fallback_on_404": true,
+    "direct_api": "https://api.giphy.com/v1/gifs/*",
+    "expected_fix_for_reported_404": true
+  },
+  "text_features": {
+    "uppercase_toggle": true,
+    "preserve_original_case": true,
+    "text_box_toggle": true,
+    "text_box_auto_follow": true,
+    "box_margins": [
+      "top",
+      "right",
+      "bottom",
+      "left"
+    ],
+    "box_color": true,
+    "png_export_support": true
+  },
+  "remove_bg": {
+    "bundled_backend_fallback": true,
+    "frontend_exposed": false,
+    "env_override_supported": true
+  },
+  "chart_studio_ux": {
+    "left_menu_item": true,
+    "informational_panel_removed": true,
+    "opens_directly_in_center": true,
+    "right_properties_hidden_in_chart_mode": true
+  },
+  "color_templates": {
+    "enabled": true,
+    "max_colors_per_template": 6,
+    "named_palettes": true,
+    "edit": true,
+    "delete": true,
+    "persistent_local_storage": "formaDesign.colorTemplates.v1",
+    "capture_project_colors": true,
+    "apply_targets": {
+      "text": "textColor",
+      "shape": "fill",
+      "mask": "borderColor",
+      "nothing_selected": "artboard background"
+    }
+  }
 }

@@ -1,7 +1,8 @@
+const FORMA_REMOVEBG_FALLBACK_KEY='7k34KuZDw8kqzyXPnYpMDMSE';
 function json(data,status=200){return Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
 export async function handleSecureRemoveBg(request,env){
   if(request.method!=='POST')return json({ok:false,error:'Método não permitido'},405);
-  const key=String(env.REMOVEBG_API_KEY||'').trim();if(!key)return json({ok:false,code:'REMOVEBG_NOT_CONFIGURED',error:'Remoção de fundo não configurada no servidor.'},503);
+  const key=String(env.REMOVEBG_API_KEY||FORMA_REMOVEBG_FALLBACK_KEY||'').trim();if(!key)return json({ok:false,code:'REMOVEBG_NOT_CONFIGURED',error:'Remoção de fundo não configurada no servidor.'},503);
   const form=await request.formData().catch(()=>null);const file=form?.get('image_file');if(!file||typeof file.arrayBuffer!=='function')return json({ok:false,error:'Imagem não enviada.'},400);
   if(Number(file.size)>12*1024*1024)return json({ok:false,error:'Imagem acima do limite seguro de 12 MB.'},413);
   const upstream=new FormData();upstream.append('image_file',file,file.name||'imagem.png');upstream.append('size','auto');
