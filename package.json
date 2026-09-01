@@ -1,12 +1,12 @@
 {
   "name": "forma-design",
-  "version": "0.9.7.5.19",
+  "version": "0.9.7.5.20",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "check": "node --check src/index.js && node --check src/ai/service.js && node --check src/forma/remove-bg.js && node --check src/forma/free-images.js && node --check src/forma/asset-proxy.js && node --check src/projects/service.js && node scripts/check-inline.mjs && npm run test:remove-bg && node scripts/test-chart-multiseries.mjs && node scripts/test-chart-responsive-resize.mjs",
+    "check": "node --check src/index.js && node --check src/ai/service.js && node --check src/forma/remove-bg.js && node --check src/forma/free-images.js && node --check src/forma/asset-proxy.js && node --check src/projects/service.js && node scripts/check-inline.mjs && npm run test:remove-bg && node scripts/test-chart-multiseries.mjs && node scripts/test-chart-responsive-resize.mjs && node scripts/test-chart-axis-font-size.mjs",
     "test:remove-bg": "node scripts/test-remove-bg.mjs && node scripts/test-remove-bg-scenarios.mjs && node scripts/test-remove-bg-ui.mjs"
   },
   "devDependencies": {

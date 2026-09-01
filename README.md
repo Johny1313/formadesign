@@ -1,4 +1,4 @@
-# FORMA DESIGN 0.9.7.5.19
+# FORMA DESIGN 0.9.7.5.20
 
 Projeto independente do editor FORMA DESIGN.
 
@@ -97,7 +97,7 @@ A exclusão múltipla também é suportada. Campos de texto, inputs e edição i
 - O elemento pode ser selecionado novamente e reaberto no Chart Studio para nova edição.
 
 
-## Remove BG — v0.9.7.5.19
+## Remove BG — v0.9.7.5.20
 
 - Corrigido para imagens locais, externas, GIPHY e assets via proxy.
 - Tenta primeiro `/api/remove-bg` no Worker.
@@ -107,17 +107,17 @@ A exclusão múltipla também é suportada. Campos de texto, inputs e edição i
 - Mensagens de erro preservam o motivo retornado pela API.
 
 
-## Deploy verification — v0.9.7.5.19
+## Deploy verification — v0.9.7.5.20
 
 After `npm install` and `npm run deploy`, verify:
 
-- `/api/health` returns `version: 0.9.7.5.19`.
-- `/design/` shows `0.9.7.5.19` in the top bar.
-- responses under `/design/` include `X-Forma-Version: 0.9.7.5.19` and `Cache-Control: no-store`.
+- `/api/health` returns `version: 0.9.7.5.20`.
+- `/design/` shows `0.9.7.5.20` in the top bar.
+- responses under `/design/` include `X-Forma-Version: 0.9.7.5.20` and `Cache-Control: no-store`.
 - Chart Studio PNG export keeps transparent pixels outside the chart.
 - Forma > Shapes > Line is stroke-only, with no fill controls and 0.25px increments.
 
-## Chart Studio — v0.9.7.5.19
+## Chart Studio — v0.9.7.5.20
 
 - Linha e Área agora detectam todas as colunas após a cronologia: A = período; B..N = séries/categorias.
 - O caminho legado de uma única série foi preservado sem alteração de renderização.
@@ -125,7 +125,7 @@ After `npm install` and `npm run deploy`, verify:
 - Em múltiplas séries, cada coluna recebe stroke/cor independente e legenda pelo cabeçalho do CSV.
 - Teste de regressão `scripts/test-chart-multiseries.mjs` impede retorno ao parser fixo em `r[1]` para Linha/Área.
 
-## Chart responsive resize — v0.9.7.5.19
+## Chart responsive resize — v0.9.7.5.20
 
 - Gráficos integrados continuam redimensionáveis diretamente na prancheta.
 - Durante o arraste, o gráfico acompanha toda a área do elemento, sem criar letterbox/espaço vazio por `object-fit: contain`.
@@ -135,3 +135,13 @@ After `npm install` and `npm run deploy`, verify:
 - O renderizador responsivo usa um iframe dedicado e mensagens com `event.source` isolado para não interferir no Chart Studio modal.
 - Exportação da prancheta usa a área exata do elemento do gráfico.
 - `npm run check` agora inclui `CHART_RESPONSIVE_RESIZE_TEST` além dos testes já existentes de Remove BG e CSV multi-séries.
+
+
+## Axis typography — v0.9.7.5.20
+
+- Independent font-size controls for X-axis labels (`valor/data/categoria`) and Y-axis index/tick labels.
+- Range: 6–96 px, default 10 px.
+- X-axis bottom reserve grows according to font size and label rotation.
+- Y-axis left reserve grows with font size to reduce clipping.
+- Settings persist in Chart Studio config and are preserved when reopening/responsive re-rendering inside the artboard.
+- Line Chart Race uses the same X/Y axis font-size controls.
