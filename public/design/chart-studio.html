@@ -39,7 +39,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 .app{height:100vh;display:grid;grid-template-rows:66px 1fr;background:var(--bg)}
 
-/* Embedded only inside FORMA DESIGN 0.9.7.5.22 */
+/* Embedded only inside FORMA DESIGN 0.9.7.5.23 */
 body{background:#d8d6d1}
 .app{height:100vh;grid-template-rows:1fr}
 .topbar{display:none!important}
@@ -78,6 +78,9 @@ body{background:#d8d6d1}
   box-shadow:0 6px 16px rgba(101,88,255,.18)
 }
 .btn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.single-selection-tools{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
+.photo-preview-line{display:flex;align-items:center;gap:8px;margin-bottom:10px}
+.photo-preview-thumb{width:42px;height:42px;border-radius:12px;background:#f3f4f6 center/cover no-repeat;border:2px solid #d0d5dd;flex:0 0 auto}
 .export-select{
   min-height:34px;border:1px solid var(--line-strong);background:#fff;color:var(--text);
   border-radius:10px;padding:0 12px;font-size:12px;font-weight:650;outline:none;min-width:205px;
@@ -339,7 +342,7 @@ body.embed-mode .app{min-height:100vh}
       <div class="brand-copy">
         <div class="brand-line">
           <strong>FORMA DESIGN</strong>
-          <span class="version-badge">CHART STUDIO · v17.7</span>
+          <span class="version-badge">CHART STUDIO · v17.8</span>
         </div>
         <span class="brand-subtitle">Editor visual de gráficos</span>
       </div>
@@ -484,7 +487,28 @@ Colômbia,27</textarea>
               <button class="btn" id="applySelectedBtn" style="width:100%">Aplicar</button>
             </div>
           </div>
+          <div class="single-selection-tools hidden" id="singleSelectionTools">
+            <div class="field">
+              <label>Nome do item selecionado</label>
+              <input id="selectedItemLabel" type="text" placeholder="Editar nome da categoria">
+            </div>
+            <div class="field">
+              <label>Foto do item selecionado</label>
+              <input id="selectedItemPhotoUpload" type="file" accept="image/*">
+            </div>
+            <div class="photo-preview-line">
+              <div class="photo-preview-thumb hidden" id="selectedItemPhotoPreview"></div>
+              <button class="btn hidden" id="removeSelectedPhotoBtn" type="button">Remover foto</button>
+            </div>
+          </div>
           <button class="btn" id="clearSelectionBtn" style="width:100%">Limpar seleção</button>
+        </div>
+
+        <div class="selection-box" id="raceMediaOptions" style="margin-top:10px">
+          <div class="section-head" style="margin-bottom:8px"><strong>Fotos nas corridas</strong><span class="hint">ative para exibir quando houver foto</span></div>
+          <div class="switchline"><label>Bar Chart Race · mostrar fotos</label><label class="switch"><input id="showBarRacePhotos" type="checkbox"><span class="slider"></span></label></div>
+          <div class="switchline"><label>Line Chart Race · mostrar fotos</label><label class="switch"><input id="showLineRacePhotos" type="checkbox"><span class="slider"></span></label></div>
+          <div class="note" style="margin-top:8px">Selecione uma categoria diretamente no gráfico para editar o nome e inserir uma foto.</div>
         </div>
       </div>
 
@@ -660,6 +684,8 @@ const state = {
   startMargins: null,
   hitRegions: [],
   itemColors: {},
+  itemLabels: {},
+  itemImages: {},
   selectedItems: new Set(),
   animationEnabled: false,
   animationPlaying: false,
@@ -926,7 +952,7 @@ function getStandardSeriesDataset(){
   const series = Array.from({length: seriesCount}, (_, seriesIndex) => ({
     idx: seriesIndex,
     rawLabel: String(parsed.headers?.[seriesIndex + 1] || `Série ${seriesIndex + 1}`).trim(),
-    label: String(parsed.headers?.[seriesIndex + 1] || `Série ${seriesIndex + 1}`).trim(),
+    label: itemLabel(seriesIndex, String(parsed.headers?.[seriesIndex + 1] || `Série ${seriesIndex + 1}`).trim()),
     rawValues: rows.map(r => parseNumericCell(r?.[seriesIndex + 1])),
     plotValues: []
   }));
@@ -974,7 +1000,7 @@ function getBarRaceDataset(){
   const items = parsed.headers.slice(1).map((header, categoryIndex) => ({
     idx: categoryIndex,
     rawLabel: header || `Categoria ${categoryIndex + 1}`,
-    label: header || `Categoria ${categoryIndex + 1}`,
+    label: itemLabel(categoryIndex, header || `Categoria ${categoryIndex + 1}`),
     values: rows.map(r => parseNumericCell(r[categoryIndex + 1]))
   }));
 
@@ -990,7 +1016,7 @@ function getLineRaceDataset(){
   const series = parsed.headers.slice(1).map((header, seriesIndex) => ({
     idx: seriesIndex,
     rawLabel: header || `Série ${seriesIndex + 1}`,
-    label: header || `Série ${seriesIndex + 1}`,
+    label: itemLabel(seriesIndex, header || `Série ${seriesIndex + 1}`),
     values: rows.map(r => parseNumericCell(r[seriesIndex + 1]))
   }));
 
@@ -1003,6 +1029,91 @@ function escapeHtml(str){
 
 function itemColor(idx){
   return state.itemColors[idx] || defaultPalette[idx % defaultPalette.length] || $('globalColor').value || '#5b6cff';
+}
+
+function itemLabel(idx, fallback){
+  const raw = state.itemLabels?.[idx];
+  const text = String(raw ?? '').trim();
+  return text || String(fallback ?? `Item ${Number(idx) + 1}`);
+}
+
+const itemImageCache = new Map();
+
+function getItemImageSrc(idx){
+  return String(state.itemImages?.[idx] || '').trim();
+}
+
+function getItemPhotoImage(idx){
+  const src = getItemImageSrc(idx);
+  if(!src) return null;
+  const cached = itemImageCache.get(src);
+  if(cached){
+    if(cached.complete && cached.naturalWidth) return cached;
+    return null;
+  }
+  const img = new Image();
+  img.onload = () => draw();
+  img.src = src;
+  itemImageCache.set(src, img);
+  return null;
+}
+
+function clipRoundedRect(c, x, y, w, h, r){
+  roundedRect(c, x, y, w, h, r);
+  c.clip();
+}
+
+function drawImageCover(c, img, x, y, w, h){
+  if(!img || !img.naturalWidth || !img.naturalHeight) return;
+  const sourceRatio = img.naturalWidth / img.naturalHeight;
+  const targetRatio = w / h;
+  let sx = 0, sy = 0, sw = img.naturalWidth, sh = img.naturalHeight;
+  if(sourceRatio > targetRatio){
+    sw = img.naturalHeight * targetRatio;
+    sx = (img.naturalWidth - sw) / 2;
+  } else {
+    sh = img.naturalWidth / targetRatio;
+    sy = (img.naturalHeight - sh) / 2;
+  }
+  c.drawImage(img, sx, sy, sw, sh, x, y, w, h);
+}
+
+function drawRoundedPhoto(c, img, x, y, w, h, radius, borderColor){
+  c.save();
+  clipRoundedRect(c, x, y, w, h, radius);
+  drawImageCover(c, img, x, y, w, h);
+  c.restore();
+  c.save();
+  c.strokeStyle = borderColor;
+  c.lineWidth = Math.max(2, Math.min(w, h) * 0.06);
+  roundedRect(c, x, y, w, h, radius);
+  c.stroke();
+  c.restore();
+}
+
+function drawCircularPhoto(c, img, cx, cy, radius, borderColor){
+  c.save();
+  c.beginPath();
+  c.arc(cx, cy, radius, 0, Math.PI * 2);
+  c.closePath();
+  c.clip();
+  drawImageCover(c, img, cx - radius, cy - radius, radius * 2, radius * 2);
+  c.restore();
+  c.save();
+  c.strokeStyle = borderColor;
+  c.lineWidth = Math.max(2, radius * 0.18);
+  c.beginPath();
+  c.arc(cx, cy, radius, 0, Math.PI * 2);
+  c.stroke();
+  c.restore();
+}
+
+function shouldShowBarRacePhotos(){
+  return !!$('showBarRacePhotos')?.checked;
+}
+
+function shouldShowLineRacePhotos(){
+  return !!$('showLineRacePhotos')?.checked;
 }
 
 function hexToRgba(hex, alpha){
@@ -1042,10 +1153,44 @@ function renderItemList(){
   updateSelectionEditor();
 }
 
+function getSelectableItemsMeta(){
+  if(chartType === 'barRace') return getBarRaceDataset().items.map(item => ({idx:item.idx, label:item.label, rawLabel:item.rawLabel}));
+  if(chartType === 'lineRace') return getLineRaceDataset().series.map(item => ({idx:item.idx, label:item.label, rawLabel:item.rawLabel}));
+  const standard = getStandardSeriesDataset();
+  if(standard.series.length > 1) return standard.series.map(item => ({idx:item.idx, label:item.label, rawLabel:item.rawLabel}));
+  return getData().map(item => ({idx:item.idx, label:item.label, rawLabel:item.rawLabel}));
+}
+
 function updateSelectionEditor(){
   const count = state.selectedItems.size;
   $('selectionCount').textContent = `${count} selecionado${count===1?'':'s'}`;
   $('selectionEditor').classList.toggle('hidden', count === 0);
+  const singleWrap = $('singleSelectionTools');
+  if(!singleWrap) return;
+  const single = count === 1 ? [...state.selectedItems][0] : null;
+  singleWrap.classList.toggle('hidden', !(count === 1));
+  if(count !== 1){
+    $('selectedItemLabel').value = '';
+    $('selectedItemPhotoPreview').classList.add('hidden');
+    $('selectedItemPhotoPreview').style.backgroundImage = 'none';
+    $('removeSelectedPhotoBtn').classList.add('hidden');
+    return;
+  }
+  const items = getSelectableItemsMeta();
+  const meta = items.find(item => String(item.idx) === String(single));
+  $('selectedItemLabel').value = itemLabel(single, meta?.rawLabel || meta?.label || `Item ${Number(single) + 1}`);
+  const src = getItemImageSrc(single);
+  const preview = $('selectedItemPhotoPreview');
+  const removeBtn = $('removeSelectedPhotoBtn');
+  if(src){
+    preview.classList.remove('hidden');
+    preview.style.backgroundImage = `url(${src})`;
+    removeBtn.classList.remove('hidden');
+  } else {
+    preview.classList.add('hidden');
+    preview.style.backgroundImage = 'none';
+    removeBtn.classList.add('hidden');
+  }
 }
 
 function selectItem(idx, multi=false){
@@ -2560,9 +2705,12 @@ function drawBarRace(dataset, w, h, progress){
   }
 
   const hideValues = $('hideValues').checked;
-  const labelWidth = getMaxTextWidth(c, data.map(d => d.label), '700 12px Inter, sans-serif');
+  const showPhotos = shouldShowBarRacePhotos();
+  const photoLabels = showPhotos ? data.filter(d => getItemImageSrc(d.idx)).map(d => d.label) : [];
+  const labelWidth = getMaxTextWidth(c, photoLabels, '700 12px Inter, sans-serif');
+  const photoReserve = showPhotos ? 54 : 0;
   const basePad = {
-    left: Math.ceil(labelWidth) + 18,
+    left: photoReserve + 20,
     right: hideValues ? 18 : 52,
     top: 32,
     bottom: 12
@@ -2579,7 +2727,7 @@ function drawBarRace(dataset, w, h, progress){
   const axis = getAxisConfigFromValues(values);
   const range = (axis.max - axis.min) || 1;
   const visibleSlots = Math.max(1, frame.visibleSlots || data.length);
-  const row = Math.max(26, h - pad.top - pad.bottom) / visibleSlots;
+  const row = Math.max(34, h - pad.top - pad.bottom) / visibleSlots;
   const radius = Math.max(0, +$('barRadius').value || 0);
 
   c.fillStyle = '#667085';
@@ -2587,41 +2735,51 @@ function drawBarRace(dataset, w, h, progress){
   c.textAlign = 'right';
   c.fillText(frame.frameLabel, w - pad.right, 18);
 
-  const drawableWidth = Math.max(30, w - pad.left - pad.right);
-
   data.forEach(d => {
-    const y = pad.top + (d.rankPos - 1) * row + row * .18;
-    const bh = Math.min(row * .62, row - 8);
+    const color = itemColor(d.colorKey ?? d.idx);
+    const hasPhoto = showPhotos && !!getItemImageSrc(d.idx);
+    const photoSize = hasPhoto ? Math.min(42, row * 0.72) : 0;
+    const photoGap = hasPhoto ? 10 : 0;
+    const barX = pad.left + photoSize + photoGap;
+    const drawableWidth = Math.max(30, w - barX - pad.right);
+    const y = pad.top + (d.rankPos - 1) * row + row * .28;
+    const bh = Math.min(row * .52, row - 10);
     const ratio = clamp((d.plotValue - axis.min) / range, 0, 1);
     const bw = drawableWidth * ratio;
+    const photoY = y + (bh - photoSize) / 2;
 
     c.fillStyle = '#eef2f6';
-    roundedRect(c, pad.left, y, drawableWidth, bh, radius);
+    roundedRect(c, barX, y, drawableWidth, bh, radius);
     c.fill();
 
-    c.fillStyle = itemColor(d.colorKey ?? d.idx);
-    roundedRect(c, pad.left, y, bw, bh, radius);
+    c.fillStyle = color;
+    roundedRect(c, barX, y, bw, bh, radius);
     c.fill();
 
     c.fillStyle = '#111827';
     c.font = '700 12px Inter, sans-serif';
-    c.textAlign = 'right';
-    c.fillText(d.label, pad.left - 8, y + bh * .6);
+    c.textAlign = 'left';
+    c.fillText(d.label, barX, y - 6);
 
     c.fillStyle = '#667085';
     c.font = '600 10px Inter, sans-serif';
-    c.textAlign = 'right';
-    c.fillText(formatRankLabel(d.rankPos), pad.left - 8, y - 4);
+    c.fillText(formatRankLabel(d.rankPos), barX, y - 18);
+
+    if(hasPhoto){
+      const img = getItemPhotoImage(d.idx);
+      if(img) drawRoundedPhoto(c, img, pad.left, photoY, photoSize, photoSize, Math.max(8, photoSize * .2), color);
+      state.hitRegions.push({idx:d.idx, type:'rect', x:pad.left, y:photoY, w:photoSize, h:photoSize});
+    }
 
     if(!hideValues){
       c.fillStyle = '#111827';
       c.font = '700 12px Inter, sans-serif';
       c.textAlign = 'left';
-      c.fillText(fmt(d.rawValue), Math.min(pad.left + bw + 8, w - 34), y + bh * .6);
+      c.fillText(fmt(d.rawValue), Math.min(barX + bw + 8, w - 34), y + bh * .6);
     }
 
-    if(state.selectedItems.has(d.idx)) drawSelectionOutlineRect(c, pad.left, y, bw, bh);
-    state.hitRegions.push({idx:d.idx, type:'rect', x:pad.left, y, w:bw, h:bh});
+    if(state.selectedItems.has(d.idx)) drawSelectionOutlineRect(c, barX, y, bw, bh);
+    state.hitRegions.push({idx:d.idx, type:'rect', x:barX, y, w:bw, h:bh});
   });
 
   drawLegend(c, data, w, h, pad);
@@ -2641,7 +2799,7 @@ function drawLineRace(dataset, w, h, progress){
 
   const basePad = {
     left: $('showY').checked ? 64 + Math.max(0, getYAxisFontSize() - 10) * 1.8 : 8,
-    right: 72,
+    right: shouldShowLineRacePhotos() ? 164 : 112,
     top: 10,
     bottom: getBottomReserve(c, legendData, true)
   };
@@ -2730,14 +2888,34 @@ function drawLineRace(dataset, w, h, progress){
       }
 
       if(isLastVisible){
-        c.fillStyle = itemColor(series.idx);
-        c.font = '700 11px Inter, sans-serif';
+        const color = itemColor(series.idx);
+        const showPhoto = shouldShowLineRacePhotos() && !!getItemImageSrc(series.idx);
+        const photoRadius = showPhoto ? Math.max(10, Math.min(18, lineWidth * 5)) : 0;
+        const photoGap = showPhoto ? 8 : 0;
+        const labelGap = 10;
+        const labelFont = '700 11px Inter, sans-serif';
+        const rankFont = '600 10px Inter, sans-serif';
+        c.font = labelFont;
+        const labelWidth = c.measureText(series.label).width;
+        const totalWidth = (showPhoto ? photoRadius * 2 + photoGap : 0) + labelWidth;
+        const startX = Math.min(p.x + labelGap, w - pad.right + 4 - totalWidth);
+        const photoCx = startX + photoRadius;
+        const textX = startX + (showPhoto ? photoRadius * 2 + photoGap : 0);
+
+        if(showPhoto){
+          const img = getItemPhotoImage(series.idx);
+          if(img) drawCircularPhoto(c, img, photoCx, p.y, photoRadius, color);
+          state.hitRegions.push({idx:series.idx, type:'circle', x:photoCx, y:p.y, r:photoRadius});
+        }
+
+        c.fillStyle = color;
+        c.font = labelFont;
         c.textAlign = 'left';
-        c.fillText(series.label, Math.min(p.x + 10, w - pad.right + 4), p.y + 4);
+        c.fillText(series.label, textX, p.y + 4);
 
         c.fillStyle = '#667085';
-        c.font = '600 10px Inter, sans-serif';
-        c.fillText(formatRankLabel(p.plotValue), Math.min(p.x + 10, w - pad.right + 4), p.y - 9);
+        c.font = rankFont;
+        c.fillText(formatRankLabel(p.plotValue), textX, p.y - 9);
       }
     });
   });
@@ -3022,7 +3200,7 @@ function buildChartConfig(){
   return {
     chartType,
     formatMode,
-    state: JSON.parse(JSON.stringify({formatW:state.formatW, formatH:state.formatH, margins:state.margins, itemColors:state.itemColors})),
+    state: JSON.parse(JSON.stringify({formatW:state.formatW, formatH:state.formatH, margins:state.margins, itemColors:state.itemColors, itemLabels:state.itemLabels, itemImages:state.itemImages})),
     controls: {
       hideValues: $('hideValues').checked,
       showX: $('showX').checked,
@@ -3064,7 +3242,9 @@ function buildChartConfig(){
       legendHorizontalPos: $('legendHorizontalPos').value,
       legendVerticalPos: $('legendVerticalPos').value,
       enableAnimation: $('enableAnimation').checked,
-      animSpeed: $('animSpeed').value
+      animSpeed: $('animSpeed').value,
+      showBarRacePhotos: $('showBarRacePhotos').checked,
+      showLineRacePhotos: $('showLineRacePhotos').checked
     },
     sheetMatrix: JSON.parse(JSON.stringify(sheetMatrix))
   };
@@ -3084,6 +3264,8 @@ function applyChartConfig(config){
     if(config.state.formatH) state.formatH = +config.state.formatH || state.formatH;
     if(config.state.margins) state.margins = Object.assign({}, state.margins, config.state.margins);
     if(config.state.itemColors) state.itemColors = Object.assign({}, config.state.itemColors);
+    if(config.state.itemLabels) state.itemLabels = Object.assign({}, config.state.itemLabels);
+    if(config.state.itemImages) state.itemImages = Object.assign({}, config.state.itemImages);
     syncMarginInputs();
   }
   if(config.formatMode) formatMode = config.formatMode;
@@ -3375,7 +3557,7 @@ $('csvFile').addEventListener('change', e => {
   });
 });
 
-['hideValues','showX','showY','xAxisFontSize','yAxisFontSize','formatDates','dateFormat','xTitle','xLabelsMode','xCustomLabels','xRotation','xLimit','yTitle','yCustomTicks','refXOn','refXValue','refYOn','refYValue','refLineColor','refLineWidth','lockY','yMin','yMax','yStep','globalColor','normalize100','barLabelGap','barRadius','hideLinePoints','smoothCurves','areaColor','areaLineWidth','areaFillOpacity','areaLineOpacity','showLegend','legendDirection','legendAlign','legendHorizontalPos','legendVerticalPos','enableAnimation','animSpeed']
+['hideValues','showX','showY','xAxisFontSize','yAxisFontSize','formatDates','dateFormat','xTitle','xLabelsMode','xCustomLabels','xRotation','xLimit','yTitle','yCustomTicks','refXOn','refXValue','refYOn','refYValue','refLineColor','refLineWidth','lockY','yMin','yMax','yStep','globalColor','normalize100','barLabelGap','barRadius','hideLinePoints','smoothCurves','areaColor','areaLineWidth','areaFillOpacity','areaLineOpacity','showLegend','legendDirection','legendAlign','legendHorizontalPos','legendVerticalPos','enableAnimation','animSpeed','showBarRacePhotos','showLineRacePhotos']
 .forEach(id => $(id).addEventListener('input', () => {
   if(id === 'xLabelsMode'){
     updateXCustomVisibility();
@@ -3396,6 +3578,34 @@ $('csvFile').addEventListener('change', e => {
 $('applyAllBtn').addEventListener('click', applyColorToAll);
 $('applySelectedBtn').addEventListener('click', applyColorToSelected);
 $('clearSelectionBtn').addEventListener('click', clearSelection);
+$('selectedItemLabel').addEventListener('input', () => {
+  if(state.selectedItems.size !== 1) return;
+  const idx = [...state.selectedItems][0];
+  state.itemLabels[idx] = $('selectedItemLabel').value;
+  renderItemList();
+  draw();
+});
+$('selectedItemPhotoUpload').addEventListener('change', event => {
+  if(state.selectedItems.size !== 1) return;
+  const file = event.target.files?.[0];
+  if(!file) return;
+  const idx = [...state.selectedItems][0];
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.itemImages[idx] = String(reader.result || '');
+    renderItemList();
+    draw();
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+});
+$('removeSelectedPhotoBtn').addEventListener('click', () => {
+  if(state.selectedItems.size !== 1) return;
+  const idx = [...state.selectedItems][0];
+  delete state.itemImages[idx];
+  renderItemList();
+  draw();
+});
 $('resetPosBtn').addEventListener('click', () => {
   state.margins = {left:80,right:80,top:120,bottom:120};
   syncMarginInputs();
