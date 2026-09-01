@@ -1,0 +1,2890 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FORMA DESIGN — Gráficos</title>
+<style>
+
+*{box-sizing:border-box}
+:root{
+  --bg:#ebe8e2;
+  --workspace:#dedbd4;
+  --panel:#f8f7f3;
+  --panel-strong:#ffffff;
+  --panel-soft:#f2f0eb;
+  --line:#dedbd4;
+  --line-strong:#cbc7bf;
+  --text:#1c1b20;
+  --muted:#77736d;
+  --soft:#9b968e;
+  --accent:#6b5cff;
+  --accent-hover:#5b4ee8;
+  --accent-soft:#f1efff;
+  --accent-line:#cfc9ff;
+  --danger:#e34d59;
+  --shadow:0 18px 48px rgba(55,48,37,.14);
+  --shadow-soft:0 5px 18px rgba(55,48,37,.07);
+}
+html,body{height:100%;margin:0}
+body{
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  background:var(--bg);color:var(--text);overflow:hidden;
+  -webkit-font-smoothing:antialiased
+}
+button,input,select,textarea{font:inherit}
+button{cursor:pointer}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{
+  outline:2px solid rgba(101,88,255,.26);outline-offset:2px
+}
+.app{height:100vh;display:grid;grid-template-rows:66px 1fr;background:var(--bg)}
+
+/* Embedded only inside FORMA DESIGN 0.9.7.5.6 */
+body{background:#d8d6d1}
+.app{height:100vh;grid-template-rows:1fr}
+.topbar{display:none!important}
+.workspace{height:100vh!important}
+/* FORMA DESIGN topbar */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+  padding:0 18px 0 16px;border-bottom:1px solid var(--line);
+  background:rgba(248,247,243,.96);backdrop-filter:blur(14px);z-index:20
+}
+.brand{display:flex;align-items:center;gap:11px;min-width:0}
+.logo{
+  width:36px;height:36px;border-radius:10px;display:grid;place-items:center;
+  color:#fff;background:var(--accent);font-weight:900;font-size:17px;
+  box-shadow:0 6px 16px rgba(101,88,255,.23)
+}
+.brand-copy{min-width:0}
+.brand-line{display:flex;align-items:center;gap:8px;min-width:0}
+.brand strong{font-size:13px;letter-spacing:.035em;white-space:nowrap}
+.brand span.brand-subtitle{display:block;color:var(--muted);font-size:10px;margin-top:2px}
+.version-badge{
+  display:inline-flex!important;align-items:center;height:20px;margin:0!important;
+  padding:0 7px;border:1px solid var(--accent-line);border-radius:999px;
+  background:var(--accent-soft);color:var(--accent)!important;
+  font-size:9px!important;font-weight:800;letter-spacing:.04em;white-space:nowrap
+}
+.actions{display:flex;align-items:center;gap:7px}
+.btn{
+  min-height:34px;border:1px solid var(--line-strong);background:var(--panel-strong);
+  color:var(--text);border-radius:9px;padding:7px 11px;font-size:11px;font-weight:650;
+  box-shadow:0 1px 2px rgba(30,27,22,.03);transition:.16s ease
+}
+.btn:hover{border-color:#b8b3aa;background:#fff;transform:translateY(-1px)}
+.btn.primary{
+  background:var(--accent);border-color:var(--accent);color:#fff;font-weight:750;
+  box-shadow:0 6px 16px rgba(101,88,255,.18)
+}
+.btn.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover)}
+.btn.ghost{background:transparent;box-shadow:none}
+
+/* Main editor shell */
+.workspace{
+  height:calc(100vh - 66px);display:grid;
+  grid-template-columns:300px minmax(0,1fr) 350px;min-height:0
+}
+.sidebar,.inspector{
+  background:var(--panel);overflow:auto;min-height:0;padding:10px;
+  scrollbar-width:thin;scrollbar-color:#c7c2ba transparent
+}
+.sidebar{border-right:1px solid var(--line)}
+.inspector{border-left:1px solid var(--line)}
+.panel-title{
+  height:28px;display:flex;align-items:center;padding:0 4px 6px;
+  color:var(--soft);font-size:9px;font-weight:800;letter-spacing:.12em
+}
+
+/* Accordion cards */
+.section{
+  padding:0;margin:0 0 8px;border:1px solid var(--line);border-radius:12px;
+  background:var(--panel-strong);overflow:hidden;box-shadow:0 1px 2px rgba(38,34,28,.025)
+}
+.section-head{
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+  margin:0;padding:11px 12px;cursor:pointer;user-select:none;min-height:42px;
+  transition:background .15s ease
+}
+.section-head:hover{background:#fbfaf7}
+.section-head strong{font-size:11px;font-weight:760}
+.section-head .hint{margin-left:auto}
+.section-head::after{
+  content:'⌄';width:20px;height:20px;display:grid;place-items:center;
+  border:1px solid transparent;border-radius:6px;font-size:13px;color:var(--soft);
+  transition:transform .18s ease,background .18s ease,border-color .18s ease
+}
+.section-head:hover::after{background:var(--panel-soft);border-color:var(--line)}
+.section.collapsed .section-head::after{transform:rotate(-90deg)}
+.section-body{padding:1px 12px 12px}
+.section-body.hidden{display:none}
+.hint,.small,.note{font-size:9px;color:var(--muted);line-height:1.48}
+.note{
+  padding:8px 9px;border-radius:8px;background:var(--panel-soft);
+  border:1px solid #e6e2dc
+}
+
+/* Segmented tabs */
+.tabs{
+  display:grid;grid-template-columns:1fr 1fr;gap:3px;margin-bottom:10px;
+  padding:3px;border:1px solid var(--line);background:var(--panel-soft);border-radius:10px
+}
+.tab{
+  border:0;background:transparent;color:var(--muted);border-radius:7px;padding:7px 8px;
+  font-size:10px;font-weight:700;transition:.15s ease
+}
+.tab:hover{color:var(--text);background:rgba(255,255,255,.62)}
+.tab.active{background:#fff;color:var(--text);box-shadow:0 1px 4px rgba(45,39,31,.08)}
+.panel{display:none}.panel.active{display:block}
+
+/* Inputs */
+textarea{
+  width:100%;min-height:160px;background:#fff;color:var(--text);
+  border:1px solid var(--line-strong);border-radius:9px;padding:10px;
+  font:12px/1.5 Consolas,monospace;resize:vertical;outline:none
+}
+input[type=text],input[type=number],select{
+  width:100%;height:34px;background:#fff;color:var(--text);
+  border:1px solid var(--line-strong);border-radius:8px;padding:7px 9px;outline:none;
+  transition:border-color .15s,box-shadow .15s
+}
+input[type=color]{
+  width:100%;height:36px;background:#fff;border:1px solid var(--line-strong);
+  border-radius:8px;padding:4px;outline:none
+}
+input[type=range]{width:100%;accent-color:var(--accent)}
+input:focus,select:focus,textarea:focus{
+  border-color:var(--accent);box-shadow:0 0 0 3px rgba(101,88,255,.09)
+}
+.field{margin-bottom:9px}
+.field label{display:block;font-size:9px;color:var(--muted);font-weight:650;margin-bottom:5px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+
+/* Chart and format cards */
+.types,.format-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.type,.format-btn{
+  position:relative;text-align:left;border:1px solid var(--line);
+  background:#fff;color:var(--muted);border-radius:10px;padding:9px 10px;
+  min-height:52px;transition:.15s ease
+}
+.type:hover,.format-btn:hover{
+  border-color:#bbb5ff;background:#faf9ff;transform:translateY(-1px)
+}
+.type.active,.format-btn.active{
+  background:var(--accent-soft);color:var(--text);border-color:var(--accent);
+  box-shadow:inset 0 0 0 1px rgba(101,88,255,.05)
+}
+.type.active::before,.format-btn.active::before{
+  content:'';position:absolute;left:8px;top:8px;width:5px;height:5px;
+  border-radius:50%;background:var(--accent)
+}
+.type b,.format-btn b{display:block;font-size:10px;padding-left:0}
+.type.active b,.format-btn.active b{padding-left:9px;color:#3930b9}
+.type span,.format-btn span{display:block;font-size:8px;margin-top:3px;color:var(--soft)}
+.type.active span,.format-btn.active span{color:#746de0}
+
+/* Switch */
+.switchline{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:8px 0}
+.switchline label{font-size:10px;color:#494640;font-weight:600}
+.switch{position:relative;width:36px;height:20px;flex:none}
+.switch input{display:none}
+.slider{position:absolute;inset:0;background:#d4d0c9;border-radius:99px;transition:.2s}
+.slider:before{
+  content:"";position:absolute;width:14px;height:14px;left:3px;top:3px;
+  background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.18)
+}
+.switch input:checked + .slider{background:var(--accent)}
+.switch input:checked + .slider:before{transform:translateX(16px)}
+
+/* Workspace / artboard */
+.canvas-wrap{
+  min-width:0;min-height:0;display:flex;align-items:center;justify-content:center;
+  padding:26px;background:
+    linear-gradient(rgba(255,255,255,.18) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.18) 1px,transparent 1px),
+    var(--workspace);
+  background-size:24px 24px;overflow:auto
+}
+.stage-shell{width:min(100%,1040px);padding:3px}
+.stage{
+  width:100%;background:#fff;border-radius:3px;overflow:hidden;position:relative;
+  box-shadow:var(--shadow);aspect-ratio:1080 / 1350;
+  outline:1px solid rgba(97,88,73,.08)
+}
+.chart-box{
+  position:absolute;background:transparent;user-select:none;touch-action:none;
+  border:1px dashed rgba(101,88,255,.55);border-radius:4px;cursor:grab;
+  transition:box-shadow .12s,border-color .12s
+}
+.chart-box.dragging{
+  cursor:grabbing;border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(101,88,255,.10)
+}
+.chart-box.resizing{
+  border-color:var(--danger);box-shadow:0 0 0 3px rgba(227,77,89,.10)
+}
+canvas{display:block;width:100%;height:100%}
+.resize-handle{
+  position:absolute;width:10px;height:10px;border-radius:3px;
+  background:#fff;border:2px solid var(--accent);z-index:5;
+  box-shadow:0 1px 4px rgba(38,32,25,.15)
+}
+.handle-nw{left:-5px;top:-5px;cursor:nwse-resize}
+.handle-ne{right:-5px;top:-5px;cursor:nesw-resize}
+.handle-sw{left:-5px;bottom:-5px;cursor:nesw-resize}
+.handle-se{right:-5px;bottom:-5px;cursor:nwse-resize}
+
+/* Spreadsheet */
+.sheet-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.sheet-wrap{
+  width:100%;max-height:300px;overflow:auto;border:1px solid var(--line-strong);
+  border-radius:10px;background:#fff;box-shadow:inset 0 1px 0 rgba(255,255,255,.65)
+}
+.sheet-grid{border-collapse:separate;border-spacing:0;min-width:100%;width:max-content}
+.sheet-grid th{
+  position:sticky;top:0;z-index:3;background:#f1efe9;color:var(--muted);
+  font-size:8px;font-weight:800;text-align:center;border-right:1px solid var(--line);
+  border-bottom:1px solid var(--line);height:24px;min-width:118px;padding:4px 8px
+}
+.sheet-grid .row-index{
+  position:sticky;left:0;z-index:2;min-width:34px;width:34px;background:#f1efe9;
+  color:var(--soft);text-align:center;font-size:8px;font-weight:800;
+  border-right:1px solid var(--line);border-bottom:1px solid var(--line)
+}
+.sheet-grid thead .row-index{z-index:4;top:0}
+.sheet-grid td{
+  min-width:118px;height:31px;padding:0;border-right:1px solid #ebe8e2;
+  border-bottom:1px solid #ebe8e2;background:#fff
+}
+.sheet-grid td input{
+  width:100%;height:30px;border:0!important;border-radius:0!important;
+  background:transparent;color:var(--text);padding:6px 8px;font-size:10px;outline:none;
+  box-shadow:none!important
+}
+.sheet-grid tr:first-child td input{font-weight:750;background:#faf9f6}
+.sheet-grid td input:focus{box-shadow:inset 0 0 0 2px var(--accent)!important;background:#fbfaff}
+.sheet-empty{padding:18px;text-align:center;color:var(--muted);font-size:10px}
+.paste-btn{
+  width:100%;border:1px dashed #b9b4ad;background:#faf9f6;color:#4e4b46;
+  border-radius:9px;padding:9px;font-size:10px;font-weight:700;transition:.15s
+}
+.paste-btn:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.filebox{
+  border:1px dashed #b9b4ad;border-radius:9px;padding:15px;text-align:center;
+  color:var(--muted);font-size:10px;background:#faf9f6
+}
+.filebox:hover{border-color:var(--accent);background:var(--accent-soft)}
+.filebox input{display:none}.filebox label{cursor:pointer}
+
+/* Selection editor */
+.selection-box{
+  border:1px solid var(--accent-line);background:var(--accent-soft);
+  border-radius:10px;padding:10px;margin-top:8px
+}
+.selection-box.hidden{display:none}
+.item-list{display:flex;flex-wrap:wrap;gap:6px}
+.item-chip{
+  display:flex;align-items:center;gap:6px;border:1px solid var(--line);
+  background:#fff;border-radius:999px;padding:6px 8px;font-size:9px;color:#4e4b46
+}
+.item-chip.selected{border-color:var(--accent);background:var(--accent-soft)}
+.swatch{width:10px;height:10px;border-radius:50%;border:1px solid rgba(0,0,0,.12);display:inline-block}
+.hidden{display:none}
+
+/* Scrollbars */
+.sidebar::-webkit-scrollbar,.inspector::-webkit-scrollbar,.sheet-wrap::-webkit-scrollbar{width:8px;height:8px}
+.sidebar::-webkit-scrollbar-thumb,.inspector::-webkit-scrollbar-thumb,.sheet-wrap::-webkit-scrollbar-thumb{
+  background:#c9c4bc;border-radius:999px;border:2px solid transparent;background-clip:padding-box
+}
+
+/* Responsive */
+@media(max-width:1180px) and (min-width:761px){
+  .workspace{grid-template-columns:270px minmax(360px,1fr) 320px}
+  .sidebar,.inspector{display:block}
+  .canvas-wrap{padding:16px}
+  .brand span.brand-subtitle{display:none}
+}
+@media(max-width:900px) and (min-width:761px){
+  .workspace{grid-template-columns:240px minmax(340px,1fr) 285px}
+  .actions .btn.ghost{display:none}
+}
+@media(max-width:760px){
+  body{overflow:auto}.app{height:auto;display:block}
+  .topbar{height:auto;min-height:66px;padding:10px;gap:10px;flex-wrap:wrap}
+  .brand-line{flex-wrap:wrap}
+  .actions{width:100%}.actions .btn{flex:1}
+  .workspace{height:auto;display:block}
+  .sidebar,.inspector{display:block;border:0;border-bottom:1px solid var(--line);padding:10px}
+  .canvas-wrap{min-height:440px;padding:14px}
+}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">F</div>
+      <div class="brand-copy">
+        <div class="brand-line">
+          <strong>FORMA DESIGN</strong>
+          <span class="version-badge">CHART STUDIO · v17.5</span>
+        </div>
+        <span class="brand-subtitle">Editor visual de gráficos</span>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn ghost" id="resetPosBtn">Reenquadrar</button>
+      <button class="btn" id="resetBtn">Restaurar exemplo</button>
+      <button class="btn primary" id="exportBtn">Exportar PNG</button>
+    </div>
+  </header>
+
+  <main class="workspace">
+    <aside class="sidebar">
+      <div class="panel-title">CONTEÚDO</div>
+      <div class="section">
+        <div class="section-head"><strong>Dados</strong><span class="hint">planilha / CSV</span></div>
+        <div class="tabs">
+          <button class="tab active" data-tab="manual">Manual</button>
+          <button class="tab" data-tab="csv">Importar CSV</button>
+        </div>
+        <div class="panel active" id="manualPanel">
+          <div class="sheet-toolbar">
+            <div class="small">Cole diretamente do Excel, Google Sheets ou CSV.</div>
+          </div>
+          <button class="paste-btn" id="pasteSheetBtn">Colar dados na planilha</button>
+          <div class="sheet-wrap" id="sheetWrap" tabindex="0" style="margin-top:8px">
+            <div id="sheetGrid"></div>
+          </div>
+          <textarea id="dataInput" style="display:none">categoria,valor
+Brasil,52
+Argentina,31
+Chile,18
+Uruguai,12
+Colômbia,27</textarea>
+          <div class="small" id="parseStatus" style="margin-top:7px">5 linhas válidas</div>
+        </div>
+        <div class="panel" id="csvPanel">
+          <div class="filebox">
+            <label for="csvFile"><b>Selecionar CSV</b><br>vírgula ou ponto e vírgula</label>
+            <input id="csvFile" type="file" accept=".csv,text/csv">
+          </div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><strong>Gráfico</strong><span class="hint">10 modelos</span></div>
+        <div class="types">
+          <button class="type active" data-type="bar"><b>Barras</b><span>horizontal</span></button>
+          <button class="type" data-type="column"><b>Colunas</b><span>vertical</span></button>
+          <button class="type" data-type="line"><b>Linha</b><span>tendência</span></button>
+          <button class="type" data-type="area"><b>Área</b><span>tendência + volume</span></button>
+          <button class="type" data-type="donut"><b>Donut</b><span>participação</span></button>
+          <button class="type" data-type="lollipop"><b>Lollipop</b><span>ranking</span></button>
+          <button class="type" data-type="barRace"><b>Bar Chart Race</b><span>corrida de barras</span></button>
+          <button class="type" data-type="lineRace"><b>Line Chart Race</b><span>linhas animadas</span></button>
+          <button class="type" data-type="treemap"><b>Treemap</b><span>hierarquia</span></button>
+          <button class="type" data-type="radar"><b>Radar</b><span>comparação radial</span></button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><strong>Formato</strong><span class="hint">prancheta</span></div>
+        <div class="format-grid">
+          <button class="format-btn active" data-format="1080x1350"><b>1080 × 1350</b><span>feed retrato</span></button>
+          <button class="format-btn" data-format="1080x1920"><b>1080 × 1920</b><span>story / reels</span></button>
+          <button class="format-btn" data-format="1920x1080"><b>1920 × 1080</b><span>widescreen</span></button>
+          <button class="format-btn" data-format="custom"><b>Personalizado</b><span>largura e altura</span></button>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <div class="field"><label>Largura</label><input id="customWidth" type="number" value="1080" min="100"></div>
+          <div class="field"><label>Altura</label><input id="customHeight" type="number" value="1350" min="100"></div>
+        </div>
+      </div>
+
+    </aside>
+
+    <section class="canvas-wrap">
+      <div class="stage-shell">
+        <div class="stage" id="stage">
+          <div class="chart-box" id="chartBox">
+            <canvas id="chartCanvas"></canvas>
+            <div class="resize-handle handle-nw" data-handle="nw"></div>
+            <div class="resize-handle handle-ne" data-handle="ne"></div>
+            <div class="resize-handle handle-sw" data-handle="sw"></div>
+            <div class="resize-handle handle-se" data-handle="se"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <aside class="inspector">
+      <div class="panel-title">PROPRIEDADES</div>
+      <div class="section">
+        <div class="section-head"><strong>Layout</strong><span class="hint">posição e tamanho</span></div>
+        <div class="row">
+          <div class="field"><label>Margem esquerda (px)</label><input id="marginLeft" type="number" value="80" min="0" max="200" step="1"></div>
+          <div class="field"><label>Margem direita (px)</label><input id="marginRight" type="number" value="80" min="0" max="200" step="1"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Margem topo (px)</label><input id="marginTop" type="number" value="120" min="0" max="200" step="1"></div>
+          <div class="field"><label>Margem base (px)</label><input id="marginBottom" type="number" value="120" min="0" max="200" step="1"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><strong>Aparência</strong><span class="hint">cor e forma</span></div>
+        <div class="row">
+          <div class="field">
+            <label>Cor padrão</label>
+            <input id="globalColor" type="color" value="#5b6cff">
+          </div>
+          <div class="field" style="display:flex;align-items:flex-end">
+            <button class="btn" id="applyAllBtn" style="width:100%">Aplicar a todos</button>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="field"><label>Arredondamento das barras (px)</label><input id="barRadius" type="number" value="10" min="0" max="40" step="1"></div>
+          <div class="field"><label>Distância nome / barra (px)</label><input id="barLabelGap" type="number" value="8" min="0" max="40" step="1"></div>
+        </div>
+
+        <div class="note">Para alterar a cor de um item específico, clique diretamente no elemento do gráfico. Use Shift ou Ctrl para selecionar mais de um.</div>
+
+        <div class="selection-box hidden" id="selectionEditor">
+          <div class="section-head" style="margin-bottom:8px"><strong>Seleção</strong><span class="hint" id="selectionCount">0 selecionados</span></div>
+          <div class="row">
+            <div class="field">
+              <label>Cor dos selecionados</label>
+              <input id="selectedColor" type="color" value="#ff5e5e">
+            </div>
+            <div class="field" style="display:flex;align-items:flex-end">
+              <button class="btn" id="applySelectedBtn" style="width:100%">Aplicar</button>
+            </div>
+          </div>
+          <button class="btn" id="clearSelectionBtn" style="width:100%">Limpar seleção</button>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><strong>Linha e preenchimento</strong><span class="hint">traço, área e pontos</span></div>
+        <div class="switchline"><label>Ocultar pontos</label><label class="switch"><input id="hideLinePoints" type="checkbox"><span class="slider"></span></label></div>
+        <div class="switchline"><label>Suavizar curvas</label><label class="switch"><input id="smoothCurves" type="checkbox"><span class="slider"></span></label></div>
+        <div class="row">
+          <div class="field"><label>Cor do preenchimento</label><input id="areaColor" type="color" value="#5b6cff"></div>
+          <div class="field"><label>Espessura da linha</label><input id="areaLineWidth" type="number" value="3" min="1" max="20" step="1"></div>
+        </div>
+        <div class="row">
+          <div class="field"><label>Opacidade do preenchimento (%)</label><input id="areaFillOpacity" type="number" value="14" min="0" max="100" step="1"></div>
+          <div class="field"><label>Opacidade da linha (%)</label><input id="areaLineOpacity" type="number" value="100" min="0" max="100" step="1"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><strong>Rótulos e valores</strong><span class="hint">texto dos dados</span></div>
+        <div class="switchline"><label>Ocultar valores</label><label class="switch"><input id="hideValues" type="checkbox"><span class="slider"></span></label></div>
+        <div class="switchline"><label>Converter datas para padrão Brasil</label><label class="switch"><input id="formatDates" type="checkbox" checked><span class="slider"></span></label></div>
+        <div class="field">
+          <label>Formato da data</label>
+          <select id="dateFormat">
+            <option value="DD/MM">DD/MM</option>
+            <option value="DD/MM/YYYY" selected>DD/MM/AAAA</option>
+            <option value="DD/MMM">DD/MMM</option>
+            <option value="DD/MMM/YY">DD/MMM/AA</option>
+          </select>
+        </div>
+        <div class="field"><label>Limite de itens</label><input id="xLimit" type="number" value="0" min="0"></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><strong>Legendas</strong><span class="hint">exibição e posição</span></div>
+        <div class="switchline"><label>Habilitar legenda</label><label class="switch"><input id="showLegend" type="checkbox"><span class="slider"></span></label></div>
+        <div class="row">
+          <div class="field">
+            <label>Direção</label>
+            <select id="legendDirection">
+              <option value="horizontal">Horizontal</option>
+              <option value="vertical">Vertical</option>
+            </select>
+          </div>
+          <div class="field" id="legendAlignWrap">
+            <label>Alinhamento</label>
+            <select id="legendAlign">
+              <option value="left">Esquerda</option>
+              <option value="center" selected>Centro</option>
+              <option value="right">Direita</option>
+            </select>
+          </div>
+        </div>
+        <div class="field" id="legendHorizontalPosWrap">
+          <label>Posição horizontal</label>
+          <select id="legendHorizontalPos">
+            <option value="top">Superior</option>
+            <option value="bottom" selected>Inferior</option>
+          </select>
+        </div>
+        <div class="field hidden" id="legendVerticalPosWrap">
+          <label>Posição vertical</label>
+          <select id="legendVerticalPos">
+            <option value="left">Esquerda</option>
+            <option value="right" selected>Direita</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><strong>Eixos</strong><span class="hint">X e Y</span></div>
+        <div class="switchline"><label>Mostrar eixo X</label><label class="switch"><input id="showX" type="checkbox" checked><span class="slider"></span></label></div>
+        <div class="switchline"><label>Mostrar eixo Y</label><label class="switch"><input id="showY" type="checkbox" checked><span class="slider"></span></label></div>
+
+        <div class="field"><label>Título do eixo X</label><input id="xTitle" type="text" value="Categoria"></div>
+        <div class="field">
+          <label>Rótulos do eixo X</label>
+          <select id="xLabelsMode">
+            <option value="all">Todos</option>
+            <option value="ends">Primeiro e último</option>
+            <option value="custom">Personalizado</option>
+          </select>
+        </div>
+        <div class="field" id="xCustomWrap">
+          <label>Personalizado X</label>
+          <input id="xCustomLabels" type="text" value="1,3,5" placeholder="Ex.: 1,3,5 ou Brasil,Chile">
+        </div>
+        <div class="field">
+          <label>Rotação dos rótulos X</label>
+          <select id="xRotation">
+            <option value="0">0°</option>
+            <option value="-25">-25°</option>
+            <option value="-45">-45°</option>
+            <option value="-90">-90°</option>
+          </select>
+        </div>
+
+        <div class="field"><label>Título do eixo Y</label><input id="yTitle" type="text" value="Valor"></div>
+        <div class="field">
+          <label>Valores mostrados no eixo Y</label>
+          <input id="yCustomTicks" type="text" value="0,50,100" placeholder="Ex.: 0,50,100">
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><strong>Referências</strong><span class="hint">linhas X e Y</span></div>
+        <div class="switchline"><label>Linha de referência X</label><label class="switch"><input id="refXOn" type="checkbox"><span class="slider"></span></label></div>
+        <div class="field">
+          <label>Referência X</label>
+          <input id="refXValue" type="text" value="" placeholder="Ex.: 50, 3, Brasil ou 30/08/2026">
+        </div>
+
+        <div class="switchline"><label>Linha de referência Y</label><label class="switch"><input id="refYOn" type="checkbox"><span class="slider"></span></label></div>
+        <div class="field">
+          <label>Referência Y</label>
+          <input id="refYValue" type="text" value="" placeholder="Ex.: 50, 3, Brasil ou 30/08/2026">
+        </div>
+
+        <div class="row">
+          <div class="field"><label>Cor</label><input id="refLineColor" type="color" value="#ef4444"></div>
+          <div class="field"><label>Espessura</label><input id="refLineWidth" type="number" value="2" min="1" max="12" step="1"></div>
+        </div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><strong>Animação</strong><span class="hint">formação do gráfico</span></div>
+        <div class="switchline"><label>Habilitar animação</label><label class="switch"><input id="enableAnimation" type="checkbox"><span class="slider"></span></label></div>
+        <div class="field"><label>Velocidade</label><input id="animSpeed" type="range" min="0.25" max="4" step="0.25" value="1"></div>
+        <div class="small" id="animSpeedLabel">1.00×</div>
+        <div class="row">
+          <div class="field" style="margin-bottom:0"><button class="btn" id="playAnimBtn" style="width:100%">Play</button></div>
+          <div class="field" style="margin-bottom:0"><button class="btn" id="pauseAnimBtn" style="width:100%">Pause</button></div>
+        </div>
+        <div class="field" style="margin-bottom:0"><button class="btn" id="restartAnimBtn" style="width:100%">Reiniciar</button></div>
+      </div>
+
+      <div class="section">
+        <div class="section-head"><strong>Escala e normalização</strong><span class="hint">proporção visual</span></div>
+        <div class="switchline"><label>Normalizar para 100</label><label class="switch"><input id="normalize100" type="checkbox"><span class="slider"></span></label></div>
+
+        <div class="switchline"><label>Usar escala manual Y</label><label class="switch"><input id="lockY" type="checkbox"><span class="slider"></span></label></div>
+        <div class="row">
+          <div class="field"><label>Mínimo Y</label><input id="yMin" type="number" value="0"></div>
+          <div class="field"><label>Máximo Y</label><input id="yMax" type="number" value="100"></div>
+        </div>
+        <div class="field"><label>Intervalo Y</label><input id="yStep" type="number" value="20" min="0"></div>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const canvas = $('chartCanvas');
+const ctx = canvas.getContext('2d');
+let chartType = 'bar';
+let formatMode = '1080x1350';
+const defaultPalette = ['#5b6cff','#20b8cd','#7c3aed','#f59e0b','#10b981','#ef4444','#0ea5e9','#f97316','#14b8a6','#a855f7'];
+
+const state = {
+  formatW: 1080,
+  formatH: 1350,
+  margins: {left:80,right:80,top:120,bottom:120},
+  dragMode: null,
+  dragHandle: null,
+  startMouseX: 0,
+  startMouseY: 0,
+  startMargins: null,
+  hitRegions: [],
+  itemColors: {},
+  selectedItems: new Set(),
+  animationEnabled: false,
+  animationPlaying: false,
+  animationProgress: 1,
+  animationFrameId: 0,
+  animationStartTs: 0
+};
+
+function splitCSVLine(line, delimiter){
+  const out=[]; let cur=''; let quoted=false;
+  for(let i=0;i<line.length;i++){
+    const c=line[i];
+    if(c === '"'){
+      if(quoted && line[i+1] === '"'){ cur += '"'; i++; }
+      else quoted = !quoted;
+    } else if(c === delimiter && !quoted){
+      out.push(cur.trim()); cur='';
+    } else cur += c;
+  }
+  out.push(cur.trim());
+  return out;
+}
+
+function parseData(text){
+  const lines = text.trim().split(/\r?\n/).filter(Boolean);
+  if(lines.length < 2) return {headers:[],rows:[]};
+  const delimiter = lines[0].split(';').length > lines[0].split(',').length ? ';' : ',';
+  return {headers:splitCSVLine(lines[0], delimiter), rows:lines.slice(1).map(line => splitCSVLine(line, delimiter))};
+}
+
+
+let sheetMatrix = [];
+
+function columnName(index){
+  let n = index + 1;
+  let name = '';
+  while(n > 0){
+    const rem = (n - 1) % 26;
+    name = String.fromCharCode(65 + rem) + name;
+    n = Math.floor((n - 1) / 26);
+  }
+  return name;
+}
+
+function detectMatrixDelimiter(text){
+  const firstLine = String(text || '').replace(/\r/g,'').split('\n')[0] || '';
+  if(firstLine.includes('\t')) return '\t';
+
+  let comma = 0, semi = 0, quoted = false;
+  for(let i=0;i<firstLine.length;i++){
+    const c = firstLine[i];
+    if(c === '"') quoted = !quoted;
+    else if(!quoted && c === ',') comma++;
+    else if(!quoted && c === ';') semi++;
+  }
+  return semi > comma ? ';' : ',';
+}
+
+function textToMatrix(text){
+  let normalized = String(text ?? '').replace(/\r\n/g,'\n').replace(/\r/g,'\n');
+  normalized = normalized.replace(/\n+$/,'');
+  if(!normalized.trim()) return [];
+
+  const lines = normalized.split('\n');
+  const delimiter = detectMatrixDelimiter(normalized);
+
+  const matrix = lines.map(line => {
+    if(delimiter === '\t') return line.split('\t').map(v => v.trim());
+    return splitCSVLine(line, delimiter);
+  });
+
+  const maxCols = Math.max(0, ...matrix.map(row => row.length));
+  return matrix.map(row => {
+    const copy = row.slice();
+    while(copy.length < maxCols) copy.push('');
+    return copy;
+  });
+}
+
+function csvEscape(value){
+  const s = String(value ?? '');
+  if(/[",\n]/.test(s)) return '"' + s.replace(/"/g,'""') + '"';
+  return s;
+}
+
+function matrixToCSV(matrix){
+  return matrix.map(row => row.map(csvEscape).join(',')).join('\n');
+}
+
+function syncDataInputFromSheet(){
+  $('dataInput').value = matrixToCSV(sheetMatrix);
+}
+
+function renderSheet(){
+  const holder = $('sheetGrid');
+  if(!sheetMatrix.length){
+    holder.innerHTML = '<div class="sheet-empty">Cole uma tabela para criar as células.</div>';
+    syncDataInputFromSheet();
+    updateTable();
+    return;
+  }
+
+  const cols = sheetMatrix[0]?.length || 0;
+  let html = '<table class="sheet-grid"><thead><tr><th class="row-index"></th>';
+  for(let c=0;c<cols;c++) html += `<th>${columnName(c)}</th>`;
+  html += '</tr></thead><tbody>';
+
+  for(let r=0;r<sheetMatrix.length;r++){
+    html += `<tr><th class="row-index">${r+1}</th>`;
+    for(let c=0;c<cols;c++){
+      html += `<td><input class="sheet-cell" data-row="${r}" data-col="${c}" value="${escapeHtml(sheetMatrix[r][c])}"></td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table>';
+  holder.innerHTML = html;
+
+  holder.querySelectorAll('.sheet-cell').forEach(input => {
+    input.addEventListener('input', () => {
+      const r = +input.dataset.row;
+      const c = +input.dataset.col;
+      sheetMatrix[r][c] = input.value;
+      syncDataInputFromSheet();
+      updateTable();
+      restartAnimation(false);
+    });
+
+    input.addEventListener('paste', e => {
+      const pasted = e.clipboardData?.getData('text/plain') || '';
+      if(!pasted.includes('\n') && !pasted.includes('\t')) return;
+      e.preventDefault();
+      loadTextIntoSheet(pasted);
+    });
+  });
+
+  syncDataInputFromSheet();
+  updateTable();
+}
+
+function loadTextIntoSheet(text){
+  const matrix = textToMatrix(text);
+  if(!matrix.length) return;
+  sheetMatrix = matrix;
+  renderSheet();
+}
+
+async function pasteFromClipboard(){
+  try{
+    if(navigator.clipboard?.readText){
+      const text = await navigator.clipboard.readText();
+      if(text){ loadTextIntoSheet(text); restartAnimation(false); }
+      return;
+    }
+  }catch(err){}
+  $('sheetWrap').focus();
+}
+
+
+const PT_MONTHS = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+function parseDateFlexible(value){
+  const s = String(value ?? '').trim();
+  let m, day, month, year;
+
+  m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})(?:[T\s].*)?$/);
+  if(m){
+    year = +m[1]; month = +m[2]; day = +m[3];
+  } else {
+    m = s.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2}|\d{4})(?:\s.*)?$/);
+    if(m){
+      day = +m[1]; month = +m[2]; year = +m[3];
+      if(year < 100) year += year >= 70 ? 1900 : 2000;
+    } else {
+      return null;
+    }
+  }
+
+  if(month < 1 || month > 12 || day < 1 || day > 31) return null;
+  const test = new Date(Date.UTC(year, month - 1, day));
+  if(test.getUTCFullYear() !== year || test.getUTCMonth() !== month - 1 || test.getUTCDate() !== day) return null;
+  return {day, month, year};
+}
+
+function formatDateLabel(value){
+  const raw = String(value ?? '').trim();
+  if(!$('formatDates').checked) return raw;
+
+  const d = parseDateFlexible(raw);
+  if(!d) return raw;
+
+  const dd = String(d.day).padStart(2,'0');
+  const mm = String(d.month).padStart(2,'0');
+  const mmm = PT_MONTHS[d.month - 1];
+  const yyyy = String(d.year);
+  const yy = yyyy.slice(-2);
+  const mode = $('dateFormat').value;
+
+  if(mode === 'DD/MM') return `${dd}/${mm}`;
+  if(mode === 'DD/MMM') return `${dd}/${mmm}`;
+  if(mode === 'DD/MMM/YY') return `${dd}/${mmm}/${yy}`;
+  return `${dd}/${mm}/${yyyy}`;
+}
+
+function parseNumericCell(value){
+  const raw = String(value ?? '').trim();
+  if(!raw) return 0;
+  const normalized = raw.replace(/\./g,'').replace(',','.');
+  const n = Number(normalized);
+  return Number.isFinite(n) ? n : 0;
+}
+
+function getParsedTable(){
+  const parsed = parseData($('dataInput').value);
+  const headers = parsed.headers || [];
+  const rows = (parsed.rows || []).filter(row => row.some(cell => String(cell ?? '').trim()));
+  return {headers, rows};
+}
+
+function applyLimitToRows(rows){
+  const limit = +$('xLimit').value || 0;
+  return limit > 0 ? rows.slice(0, limit) : rows.slice();
+}
+
+function getData(){
+  const parsed = getParsedTable();
+
+  let rows = applyLimitToRows(parsed.rows).map((r,i)=>{
+    const raw = parseNumericCell(r[1]);
+    const rawLabel = r[0] || `Item ${i+1}`;
+
+    return {
+      rawLabel,
+      label: formatDateLabel(rawLabel),
+      rawValue: raw,
+      value: raw,
+      plotValue: raw,
+      idx: i
+    };
+  });
+
+  if($('normalize100').checked && rows.length){
+    const maxValue = Math.max(...rows.map(r => r.rawValue), 0);
+    rows = rows.map(r => ({
+      ...r,
+      plotValue: maxValue > 0 ? (r.rawValue / maxValue) * 100 : 0
+    }));
+  }
+
+  return rows;
+}
+
+function getBarRaceDataset(){
+  const parsed = getParsedTable();
+  const rows = parsed.rows.filter(row => row.some(cell => String(cell ?? '').trim()));
+
+  const frameLabels = rows.map((r, i) => formatDateLabel(r[0] || `Período ${i + 1}`));
+  const rawFrameLabels = rows.map((r, i) => r[0] || `Período ${i + 1}`);
+
+  const items = parsed.headers.slice(1).map((header, categoryIndex) => ({
+    idx: categoryIndex,
+    rawLabel: header || `Categoria ${categoryIndex + 1}`,
+    label: header || `Categoria ${categoryIndex + 1}`,
+    values: rows.map(r => parseNumericCell(r[categoryIndex + 1]))
+  }));
+
+  return {frameLabels, rawFrameLabels, items};
+}
+
+function getLineRaceDataset(){
+  const parsed = getParsedTable();
+  const rows = applyLimitToRows(parsed.rows);
+  const xLabels = rows.map((r, i) => formatDateLabel(r[0] || `Item ${i+1}`));
+  const rawXLabels = rows.map((r, i) => r[0] || `Item ${i+1}`);
+
+  const series = parsed.headers.slice(1).map((header, seriesIndex) => ({
+    idx: seriesIndex,
+    rawLabel: header || `Série ${seriesIndex + 1}`,
+    label: header || `Série ${seriesIndex + 1}`,
+    values: rows.map(r => parseNumericCell(r[seriesIndex + 1]))
+  }));
+
+  return {xLabels, rawXLabels, series};
+}
+
+function escapeHtml(str){
+  return String(str ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));
+}
+
+function itemColor(idx){
+  return state.itemColors[idx] || defaultPalette[idx % defaultPalette.length] || $('globalColor').value || '#5b6cff';
+}
+
+function hexToRgba(hex, alpha){
+  let h = String(hex || '').replace('#','').trim();
+  if(h.length === 3) h = h.split('').map(ch => ch + ch).join('');
+  const r = parseInt(h.slice(0,2), 16) || 0;
+  const g = parseInt(h.slice(2,4), 16) || 0;
+  const b = parseInt(h.slice(4,6), 16) || 0;
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function parseNumberList(text){
+  return String(text || '')
+    .split(',')
+    .map(v => Number(v.trim().replace(/\./g,'').replace(',','.')))
+    .filter(v => Number.isFinite(v));
+}
+
+function getCustomYTicks(){
+  return parseNumberList($('yCustomTicks').value);
+}
+
+function updateTable(){
+  const parsed = parseData($('dataInput').value);
+  const totalRows = sheetMatrix.length || (parsed.rows.length ? parsed.rows.length + 1 : 0);
+  const totalCols = sheetMatrix[0]?.length || parsed.headers.length || 0;
+  $('parseStatus').textContent = totalRows
+    ? `${totalRows} linhas × ${totalCols} colunas`
+    : 'Sem dados';
+  renderItemList();
+  draw();
+}
+
+function renderItemList(){
+  // O painel visual "Itens" foi removido na v11.
+  // A seleção continua sendo feita diretamente no gráfico.
+  updateSelectionEditor();
+}
+
+function updateSelectionEditor(){
+  const count = state.selectedItems.size;
+  $('selectionCount').textContent = `${count} selecionado${count===1?'':'s'}`;
+  $('selectionEditor').classList.toggle('hidden', count === 0);
+}
+
+function selectItem(idx, multi=false){
+  if(!multi) state.selectedItems.clear();
+  if(multi && state.selectedItems.has(idx)) state.selectedItems.delete(idx);
+  else state.selectedItems.add(idx);
+  renderItemList();
+  draw();
+}
+
+function clearSelection(){
+  state.selectedItems.clear();
+  renderItemList();
+  draw();
+}
+
+function setFormat(mode){
+  formatMode = mode;
+  document.querySelectorAll('.format-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.format === mode));
+  if(mode === '1080x1350'){ state.formatW = 1080; state.formatH = 1350; }
+  if(mode === '1080x1920'){ state.formatW = 1080; state.formatH = 1920; }
+  if(mode === '1920x1080'){ state.formatW = 1920; state.formatH = 1080; }
+  if(mode === 'custom'){
+    state.formatW = Math.max(100, +$('customWidth').value || 1080);
+    state.formatH = Math.max(100, +$('customHeight').value || 1350);
+  }
+  $('stage').style.aspectRatio = `${state.formatW} / ${state.formatH}`;
+  applyChartBox();
+}
+
+function updateCustomFormat(){
+  if(formatMode === 'custom') setFormat('custom');
+}
+
+function roundedRect(c, x, y, w, h, r){
+  r = Math.min(r, w/2, h/2);
+  c.beginPath();
+  c.moveTo(x+r, y);
+  c.arcTo(x+w, y, x+w, y+h, r);
+  c.arcTo(x+w, y+h, x, y+h, r);
+  c.arcTo(x, y+h, x, y, r);
+  c.arcTo(x, y, x+w, y, r);
+  c.closePath();
+}
+
+function clamp(val, min, max){ return Math.max(min, Math.min(max, val)); }
+function fmt(v){ return Number(v).toLocaleString('pt-BR', {maximumFractionDigits:2}); }
+
+function syncMarginInputs(){
+  $('marginLeft').value = Math.round(state.margins.left);
+  $('marginRight').value = Math.round(state.margins.right);
+  $('marginTop').value = Math.round(state.margins.top);
+  $('marginBottom').value = Math.round(state.margins.bottom);
+}
+
+function readMarginInputs(){
+  state.margins.left = clamp(+$('marginLeft').value || 0, 0, 200);
+  state.margins.right = clamp(+$('marginRight').value || 0, 0, 200);
+  state.margins.top = clamp(+$('marginTop').value || 0, 0, 200);
+  state.margins.bottom = clamp(+$('marginBottom').value || 0, 0, 200);
+}
+
+function applyChartBox(){
+  const stage = $('stage');
+  const sw = stage.clientWidth, sh = stage.clientHeight;
+  let left = state.margins.left, right = state.margins.right, top = state.margins.top, bottom = state.margins.bottom;
+  const minW = 140, minH = 140;
+
+  if(sw - left - right < minW){
+    const overflow = minW - (sw - left - right);
+    right = Math.max(0, right - overflow);
+    state.margins.right = right;
+  }
+  if(sh - top - bottom < minH){
+    const overflow = minH - (sh - top - bottom);
+    bottom = Math.max(0, bottom - overflow);
+    state.margins.bottom = bottom;
+  }
+
+  $('chartBox').style.left = left + 'px';
+  $('chartBox').style.top = top + 'px';
+  $('chartBox').style.width = (sw - left - right) + 'px';
+  $('chartBox').style.height = (sh - top - bottom) + 'px';
+
+  syncMarginInputs();
+  resizeCanvas();
+}
+
+function resizeCanvas(){
+  const rect = $('chartBox').getBoundingClientRect();
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = Math.max(1, Math.round(rect.width * dpr));
+  canvas.height = Math.max(1, Math.round(rect.height * dpr));
+  canvas.style.width = rect.width + 'px';
+  canvas.style.height = rect.height + 'px';
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  draw();
+}
+
+function getYAxisConfig(data){
+  const customTicks = getCustomYTicks();
+  const isNormalized = $('normalize100').checked;
+  const plotValues = data.map(d => d.plotValue);
+  const autoMin = customTicks.length ? Math.min(...customTicks) : 0;
+
+  let autoMax;
+  if(customTicks.length){
+    autoMax = Math.max(...customTicks);
+  } else if(isNormalized) {
+    autoMax = 100;
+  } else {
+    autoMax = Math.max(...plotValues, 1) * 1.15;
+  }
+
+  if($('lockY').checked){
+    let min = +$('yMin').value;
+    let max = +$('yMax').value;
+    if(!Number.isFinite(min)) min = autoMin;
+    if(!Number.isFinite(max)) max = autoMax;
+    if(max <= min) max = min + 1;
+    return {min,max,step:+$('yStep').value || 0,ticks:customTicks};
+  }
+  return {min:autoMin, max:autoMax, step:0, ticks:customTicks};
+}
+
+function getYTickValues(axis){
+  if(axis.ticks && axis.ticks.length) return axis.ticks;
+  if($('normalize100').checked) return [0,25,50,75,100];
+  const range = axis.max - axis.min;
+  let ticks = [];
+  if(axis.step > 0){
+    for(let v = axis.min; v <= axis.max + 1e-9; v += axis.step) ticks.push(v);
+  } else {
+    for(let i=0;i<=5;i++) ticks.push(axis.min + (range*i/5));
+  }
+  return ticks;
+}
+
+function drawYAxis(c, w, h, pad, axis){
+  if(!$('showY').checked) return;
+  c.strokeStyle = '#e1e5ec';
+  c.fillStyle = '#667085';
+  c.lineWidth = 1;
+  c.font = '10px Inter, sans-serif';
+  c.textAlign = 'right';
+
+  const ticks = getYTickValues(axis);
+  const range = axis.max - axis.min || 1;
+  ticks.forEach(v => {
+    const y = h - pad.bottom - ((v-axis.min)/range) * (h-pad.top-pad.bottom);
+    c.beginPath();
+    c.moveTo(pad.left, y);
+    c.lineTo(w-pad.right, y);
+    c.stroke();
+    c.fillText(fmt(v), pad.left-8, y+3);
+  });
+
+  const title = $('yTitle').value.trim();
+  if(title){
+    c.save();
+    c.translate(12, h/2);
+    c.rotate(-Math.PI/2);
+    c.textAlign = 'center';
+    c.font = '600 10px Inter, sans-serif';
+    c.fillText(title, 0, 0);
+    c.restore();
+  }
+}
+
+function shouldShowXLabel(item, index, data){
+  const mode = $('xLabelsMode').value;
+  if(mode === 'all') return true;
+  if(mode === 'ends') return index === 0 || index === data.length - 1;
+  const tokens = String($('xCustomLabels').value || '')
+    .split(',')
+    .map(t => t.trim())
+    .filter(Boolean);
+  if(!tokens.length) return false;
+  const numSet = new Set(tokens.map(t => parseInt(t,10)).filter(n => Number.isFinite(n)).map(n => n-1));
+  const labelSet = new Set(tokens.map(t => t.toLowerCase()));
+  return numSet.has(index)
+    || labelSet.has(String(item.label).toLowerCase())
+    || labelSet.has(String(item.rawLabel ?? '').toLowerCase());
+}
+
+function updateXCustomVisibility(){
+  $('xCustomWrap').classList.toggle('hidden', $('xLabelsMode').value !== 'custom');
+}
+
+
+function getLegendSettings(){
+  return {
+    enabled: $('showLegend')?.checked || false,
+    direction: $('legendDirection')?.value || 'horizontal',
+    align: $('legendAlign')?.value || 'center',
+    horizontalPos: $('legendHorizontalPos')?.value || 'bottom',
+    verticalPos: $('legendVerticalPos')?.value || 'right'
+  };
+}
+
+function updateLegendControlVisibility(){
+  const isVertical = ($('legendDirection')?.value || 'horizontal') === 'vertical';
+  $('legendAlignWrap')?.classList.toggle('hidden', isVertical);
+  $('legendHorizontalPosWrap')?.classList.toggle('hidden', isVertical);
+  $('legendVerticalPosWrap')?.classList.toggle('hidden', !isVertical);
+}
+
+function getLegendItems(c, data){
+  c.save();
+  c.font = '10px Inter, sans-serif';
+  const items = data.map(d => ({
+    label: String(d.label ?? ''),
+    color: itemColor(d.idx),
+    width: 16 + c.measureText(String(d.label ?? '')).width + 16
+  }));
+  c.restore();
+  return items;
+}
+
+function getLegendLines(c, data, availableWidth){
+  const settings = getLegendSettings();
+  const items = getLegendItems(c, data);
+
+  if(settings.direction === 'vertical'){
+    const width = items.length ? Math.max(...items.map(it => it.width)) : 0;
+    return {
+      mode: 'vertical',
+      items,
+      width,
+      lineHeight: 18
+    };
+  }
+
+  let lines = [[]];
+  let widths = [0];
+  items.forEach(it => {
+    if(widths[widths.length - 1] + it.width > availableWidth && lines[lines.length - 1].length){
+      lines.push([it]);
+      widths.push(it.width);
+    } else {
+      lines[lines.length - 1].push(it);
+      widths[widths.length - 1] += it.width;
+    }
+  });
+
+  return {
+    mode: 'horizontal',
+    lines,
+    widths,
+    lineHeight: 18
+  };
+}
+
+function getLegendReserve(c, data, basePad, w, h){
+  const settings = getLegendSettings();
+  if(!settings.enabled || !data.length) return {top:0,bottom:0,left:0,right:0};
+
+  const availableWidth = Math.max(40, w - basePad.left - basePad.right);
+  const layout = getLegendLines(c, data, availableWidth);
+
+  if(layout.mode === 'vertical'){
+    const width = layout.width + 20;
+    return settings.verticalPos === 'left'
+      ? {top:0,bottom:0,left:width,right:0}
+      : {top:0,bottom:0,left:0,right:width};
+  }
+
+  const height = layout.lines.length * layout.lineHeight + 12;
+  return settings.horizontalPos === 'top'
+    ? {top:height,bottom:0,left:0,right:0}
+    : {top:0,bottom:height,left:0,right:0};
+}
+
+function drawLegend(c, data, w, h, pad){
+  const settings = getLegendSettings();
+  if(!settings.enabled || !data.length) return;
+
+  const availableWidth = Math.max(40, w - pad.left - pad.right);
+  const availableHeight = Math.max(40, h - pad.top - pad.bottom);
+  const layout = getLegendLines(c, data, availableWidth);
+
+  c.save();
+  c.font = '10px Inter, sans-serif';
+  c.textBaseline = 'middle';
+
+  if(layout.mode === 'vertical'){
+    const reserveWidth = layout.width + 20;
+    const startX = settings.verticalPos === 'left' ? 8 : w - reserveWidth + 8;
+    const totalHeight = layout.items.length * layout.lineHeight;
+    const startY = pad.top + (availableHeight - totalHeight) / 2 + 6;
+
+    layout.items.forEach((it, i) => {
+      const y = startY + i * layout.lineHeight;
+      c.fillStyle = it.color;
+      roundedRect(c, startX, y - 5, 10, 10, 3);
+      c.fill();
+      c.fillStyle = '#111827';
+      c.textAlign = 'left';
+      c.fillText(it.label, startX + 16, y);
+    });
+
+    c.restore();
+    return;
+  }
+
+  const totalHeight = layout.lines.length * layout.lineHeight + 12;
+  const top = settings.horizontalPos === 'top' ? 6 : h - totalHeight + 6;
+
+  layout.lines.forEach((line, lineIndex) => {
+    const lineWidth = layout.widths[lineIndex] || 0;
+    let x = pad.left;
+    if(settings.align === 'center') x = pad.left + (availableWidth - lineWidth) / 2;
+    if(settings.align === 'right') x = w - pad.right - lineWidth;
+    const y = top + lineIndex * layout.lineHeight + 6;
+
+    line.forEach(it => {
+      c.fillStyle = it.color;
+      roundedRect(c, x, y - 5, 10, 10, 3);
+      c.fill();
+      c.fillStyle = '#111827';
+      c.textAlign = 'left';
+      c.fillText(it.label, x + 16, y);
+      x += it.width;
+    });
+  });
+
+  c.restore();
+}
+
+
+function initAccordionPanels(){
+  const groups = [document.querySelector('.sidebar'), document.querySelector('.inspector')].filter(Boolean);
+
+  groups.forEach(group => {
+    const sections = Array.from(group.querySelectorAll(':scope > .section'));
+
+    sections.forEach((section, index) => {
+      const head = section.querySelector(':scope > .section-head');
+      if(!head) return;
+
+      let body = section.querySelector(':scope > .section-body');
+
+      if(!body){
+        body = document.createElement('div');
+        body.className = 'section-body';
+
+        const nodes = Array.from(section.childNodes).filter(node => node !== head);
+        nodes.forEach(node => body.appendChild(node));
+
+        section.appendChild(body);
+      }
+
+      const activateSection = () => {
+        sections.forEach(current => {
+          const currentBody = current.querySelector(':scope > .section-body');
+          if(!currentBody) return;
+
+          const active = current === section;
+          current.classList.toggle('collapsed', !active);
+          currentBody.classList.toggle('hidden', !active);
+        });
+      };
+
+      if(index === 0){
+        section.classList.remove('collapsed');
+        body.classList.remove('hidden');
+      } else {
+        section.classList.add('collapsed');
+        body.classList.add('hidden');
+      }
+
+      head.addEventListener('click', event => {
+        if(event.target.closest('input,select,textarea,button,label')) return;
+        activateSection();
+      });
+    });
+  });
+}
+
+function getReferenceStyle(){
+  return {
+    color: $('refLineColor').value || '#ef4444',
+    width: Math.max(1, +$('refLineWidth').value || 1)
+  };
+}
+
+function drawRefStroke(c, x1, y1, x2, y2){
+  const s = getReferenceStyle();
+  c.save();
+  c.strokeStyle = s.color;
+  c.lineWidth = s.width;
+  c.setLineDash([7,5]);
+  c.beginPath();
+  c.moveTo(x1,y1);
+  c.lineTo(x2,y2);
+  c.stroke();
+  c.restore();
+}
+
+function parseReferenceNumber(value){
+  const s = String(value ?? '').trim().replace(/\s/g,'').replace(',','.');
+  if(!s || !/^-?\d+(?:\.\d+)?$/.test(s)) return null;
+  const n = Number(s);
+  return Number.isFinite(n) ? n : null;
+}
+
+function resolveReferenceIndex(data, value){
+  const target = String(value ?? '').trim();
+  if(!target) return null;
+
+  if(/^\d+$/.test(target)){
+    const pos = parseInt(target,10) - 1;
+    if(pos >= 0 && pos < data.length) return pos;
+  }
+
+  const low = target.toLowerCase();
+  return data.findIndex(d =>
+    String(d.label).toLowerCase() === low ||
+    String(d.rawLabel ?? '').toLowerCase() === low
+  );
+}
+
+function drawNumericReference(c, value, min, max, startPx, endPx, vertical, crossStart, crossEnd){
+  const n = parseReferenceNumber(value);
+  if(n === null || max === min || n < Math.min(min,max) || n > Math.max(min,max)) return;
+  const ratio = (n - min) / (max - min);
+  const pos = startPx + ratio * (endPx - startPx);
+
+  if(vertical) drawRefStroke(c, pos, crossStart, pos, crossEnd);
+  else drawRefStroke(c, crossStart, pos, crossEnd, pos);
+}
+
+function drawReferenceLinesForColumn(data, w, h, pad, axis){
+  if($('refYOn').checked){
+    const n = parseReferenceNumber($('refYValue').value);
+    if(n !== null && n >= axis.min && n <= axis.max){
+      const y = h - pad.bottom - ((n-axis.min)/(axis.max-axis.min || 1)) * (h-pad.top-pad.bottom);
+      drawRefStroke(ctx, pad.left, y, w-pad.right, y);
+    }
+  }
+
+  if($('refXOn').checked){
+    const idx = resolveReferenceIndex(data, $('refXValue').value);
+    if(idx >= 0){
+      const cell = (w-pad.left-pad.right) / data.length;
+      const x = pad.left + idx*cell + cell/2;
+      drawRefStroke(ctx, x, pad.top, x, h-pad.bottom);
+    }
+  }
+}
+
+function drawReferenceLinesForLine(data, w, h, pad, axis){
+  if($('refYOn').checked){
+    const n = parseReferenceNumber($('refYValue').value);
+    if(n !== null && n >= axis.min && n <= axis.max){
+      const y = h - pad.bottom - ((n-axis.min)/(axis.max-axis.min || 1)) * (h-pad.top-pad.bottom);
+      drawRefStroke(ctx, pad.left, y, w-pad.right, y);
+    }
+  }
+
+  if($('refXOn').checked){
+    const idx = resolveReferenceIndex(data, $('refXValue').value);
+    if(idx >= 0){
+      const innerW = w-pad.left-pad.right;
+      const x = pad.left + (data.length === 1 ? innerW/2 : idx*innerW/(data.length-1));
+      drawRefStroke(ctx, x, pad.top, x, h-pad.bottom);
+    }
+  }
+}
+
+function drawReferenceLinesForBar(data, w, h, pad, axis, row, labelHeight, gap){
+  if($('refXOn').checked){
+    const n = parseReferenceNumber($('refXValue').value);
+    if(n !== null && n >= axis.min && n <= axis.max){
+      const x = pad.left + ((n-axis.min)/(axis.max-axis.min || 1)) * (w-pad.left-pad.right);
+      drawRefStroke(ctx, x, pad.top, x, h-pad.bottom);
+    }
+  }
+
+  if($('refYOn').checked){
+    const idx = resolveReferenceIndex(data, $('refYValue').value);
+    if(idx >= 0){
+      const rowTop = pad.top + idx*row;
+      const trackY = rowTop + labelHeight + gap;
+      const y = trackY + Math.max(8, Math.min(row*.46, Math.max(10,row-labelHeight-gap-6))) / 2;
+      drawRefStroke(ctx, pad.left, y, w-pad.right, y);
+    }
+  }
+}
+
+function drawReferenceLinesForLollipop(data, w, h, pad, axis, row){
+  if($('refXOn').checked){
+    const n = parseReferenceNumber($('refXValue').value);
+    if(n !== null && n >= axis.min && n <= axis.max){
+      const x = pad.left + ((n-axis.min)/(axis.max-axis.min || 1)) * (w-pad.left-pad.right);
+      drawRefStroke(ctx, x, pad.top, x, h-pad.bottom);
+    }
+  }
+
+  if($('refYOn').checked){
+    const idx = resolveReferenceIndex(data, $('refYValue').value);
+    if(idx >= 0){
+      const y = pad.top + idx*row + row*.5;
+      drawRefStroke(ctx, pad.left, y, w-pad.right, y);
+    }
+  }
+}
+
+function drawXAxisTitle(c, w, h, pad){
+  if(!$('showX').checked) return;
+  const title = $('xTitle').value.trim();
+  if(!title) return;
+  c.fillStyle = '#667085';
+  c.font = '600 10px Inter, sans-serif';
+  c.textAlign = 'center';
+  const y = Math.min(h - 4, h - pad.bottom + 18);
+  c.fillText(title, pad.left + (w - pad.left - pad.right) / 2, y);
+}
+
+function drawRotatedLabel(c, label, x, y){
+  const a = (+$('xRotation').value || 0) * Math.PI/180;
+  c.save();
+  c.translate(x,y);
+  c.rotate(a);
+  c.fillStyle = '#667085';
+  c.font = '10px Inter, sans-serif';
+  c.textAlign = a ? 'right' : 'center';
+  c.fillText(label, 0, 0);
+  c.restore();
+}
+
+function drawSelectionOutlineRect(c, x, y, w, h){
+  c.save();
+  c.strokeStyle = '#111827';
+  c.lineWidth = 2;
+  c.setLineDash([4,3]);
+  roundedRect(c, x-2, y-2, w+4, h+4, 9);
+  c.stroke();
+  c.restore();
+}
+
+function drawSelectionOutlineCircle(c, x, y, r){
+  c.save();
+  c.strokeStyle = '#111827';
+  c.lineWidth = 2;
+  c.setLineDash([4,3]);
+  c.beginPath();
+  c.arc(x, y, r+4, 0, Math.PI*2);
+  c.stroke();
+  c.restore();
+}
+
+function getMaxTextWidth(c, labels, font='10px Inter, sans-serif'){
+  c.save();
+  c.font = font;
+  let max = 0;
+  labels.forEach(label => {
+    max = Math.max(max, c.measureText(String(label ?? '')).width);
+  });
+  c.restore();
+  return max;
+}
+
+function getBottomReserve(c, data, includeAxis=true){
+  let bottom = 8;
+  const legendReserve = getLegendReserve(c, data, {left:0,right:0,top:0,bottom:0}, 500, 500);
+  bottom += legendReserve.bottom || 0;
+  if(includeAxis && $('showX').checked){
+    const rotation = Math.abs(+($('xRotation').value || 0));
+    bottom += rotation >= 45 ? 34 : rotation > 0 ? 24 : 16;
+    if($('xTitle').value.trim()) bottom += 16;
+  }
+  return bottom;
+}
+
+
+function getAxisConfigFromValues(values){
+  const customTicks = getCustomYTicks();
+  const isNormalized = $('normalize100').checked;
+  const finiteValues = values.filter(v => Number.isFinite(v));
+  const autoMin = customTicks.length ? Math.min(...customTicks) : 0;
+
+  let autoMax;
+  if(customTicks.length){
+    autoMax = Math.max(...customTicks);
+  } else if(isNormalized){
+    autoMax = 100;
+  } else {
+    autoMax = Math.max(...finiteValues, 1) * 1.15;
+  }
+
+  if($('lockY').checked){
+    let min = +$('yMin').value;
+    let max = +$('yMax').value;
+    if(!Number.isFinite(min)) min = autoMin;
+    if(!Number.isFinite(max)) max = autoMax;
+    if(max <= min) max = min + 1;
+    return {min, max, step:+$('yStep').value || 0, ticks:customTicks};
+  }
+
+  return {min:autoMin, max:autoMax, step:0, ticks:customTicks};
+}
+
+function drawEmptyState(message, submessage=''){
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  ctx.save();
+  ctx.clearRect(0,0,w,h);
+  ctx.fillStyle = '#667085';
+  ctx.font = '600 14px Inter, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText(message, w/2, h/2 - (submessage ? 10 : 0));
+  if(submessage){
+    ctx.fillStyle = '#98a2b3';
+    ctx.font = '12px Inter, sans-serif';
+    ctx.fillText(submessage, w/2, h/2 + 12);
+  }
+  ctx.restore();
+}
+
+function getAnimationSpeed(){
+  return Math.max(0.25, +($('animSpeed')?.value || 1));
+}
+
+function updateAnimationSpeedLabel(){
+  const el = $('animSpeedLabel');
+  if(el) el.textContent = getAnimationSpeed().toFixed(2) + '×';
+}
+
+function getAnimationDuration(){
+  const base =
+    chartType === 'barRace' ? 7000 :
+    chartType === 'lineRace' ? 5000 :
+    chartType === 'treemap' ? 2200 :
+    chartType === 'radar' ? 2200 :
+    1800;
+  return base / getAnimationSpeed();
+}
+
+function shouldAnimate(){
+  return !!($('enableAnimation')?.checked);
+}
+
+function cancelAnimationLoop(){
+  if(state.animationFrameId){
+    cancelAnimationFrame(state.animationFrameId);
+    state.animationFrameId = 0;
+  }
+}
+
+function updateAnimationButtons(){
+  updateAnimationSpeedLabel();
+  state.animationEnabled = shouldAnimate();
+}
+
+function animationTick(ts){
+  if(!state.animationPlaying) return;
+  if(!state.animationStartTs) state.animationStartTs = ts;
+  const duration = getAnimationDuration();
+  const progress = clamp((ts - state.animationStartTs) / duration, 0, 1);
+  state.animationProgress = progress;
+  draw();
+  if(progress >= 1){
+    state.animationPlaying = false;
+    state.animationFrameId = 0;
+    return;
+  }
+  state.animationFrameId = requestAnimationFrame(animationTick);
+}
+
+function restartAnimation(autoPlay=true){
+  cancelAnimationLoop();
+  if(!shouldAnimate()){
+    state.animationEnabled = false;
+    state.animationPlaying = false;
+    state.animationProgress = 1;
+    draw();
+    return;
+  }
+  state.animationEnabled = true;
+  state.animationProgress = 0;
+  state.animationStartTs = 0;
+  if(autoPlay){
+    state.animationPlaying = true;
+    state.animationFrameId = requestAnimationFrame(animationTick);
+  } else {
+    state.animationPlaying = false;
+    draw();
+  }
+}
+
+function playAnimation(){
+  if(!shouldAnimate()){
+    $('enableAnimation').checked = true;
+  }
+  cancelAnimationLoop();
+  state.animationEnabled = true;
+  state.animationPlaying = true;
+  const duration = getAnimationDuration();
+  state.animationStartTs = performance.now() - (state.animationProgress * duration);
+  state.animationFrameId = requestAnimationFrame(animationTick);
+}
+
+function pauseAnimation(){
+  cancelAnimationLoop();
+  state.animationPlaying = false;
+}
+
+function getRenderProgress(){
+  if(!shouldAnimate()) return 1;
+  return clamp(state.animationProgress, 0, 1);
+}
+
+function getBottomReserve(c, data, includeAxis=true){
+  let bottom = 8;
+  const legendReserve = getLegendReserve(c, data, {left:0,right:0,top:0,bottom:0}, 500, 500);
+  bottom += legendReserve.bottom || 0;
+  if(includeAxis && $('showX').checked){
+    const rotation = Math.abs(+($('xRotation').value || 0));
+    bottom += rotation >= 45 ? 34 : rotation > 0 ? 24 : 16;
+    if($('xTitle').value.trim()) bottom += 16;
+  }
+  return bottom;
+}
+
+function getMaxTextWidth(c, labels, font='10px Inter, sans-serif'){
+  c.save();
+  c.font = font;
+  let max = 0;
+  labels.forEach(label => {
+    max = Math.max(max, c.measureText(String(label ?? '')).width);
+  });
+  c.restore();
+  return max;
+}
+
+function getSimpleSliceRects(items, x, y, w, h){
+  if(!items.length) return [];
+  const total = items.reduce((sum, item) => sum + Math.max(0, item.value), 0) || 1;
+  let horizontal = w >= h;
+
+  function subdivide(list, rx, ry, rw, rh, orient){
+    const subtotal = list.reduce((sum, item) => sum + Math.max(0, item.value), 0) || 1;
+    if(list.length === 1){
+      return [{...list[0], x:rx, y:ry, w:rw, h:rh}];
+    }
+    let acc = 0;
+    const splitIndex = Math.max(1, Math.min(list.length - 1, Math.round(list.length / 2)));
+    const left = list.slice(0, splitIndex);
+    const right = list.slice(splitIndex);
+    const leftSum = left.reduce((sum, item) => sum + Math.max(0, item.value), 0);
+    const ratio = leftSum / subtotal;
+
+    if(orient){
+      const w1 = rw * ratio;
+      return [
+        ...subdivide(left, rx, ry, w1, rh, !orient),
+        ...subdivide(right, rx + w1, ry, rw - w1, rh, !orient)
+      ];
+    } else {
+      const h1 = rh * ratio;
+      return [
+        ...subdivide(left, rx, ry, rw, h1, !orient),
+        ...subdivide(right, rx, ry + h1, rw, rh - h1, !orient)
+      ];
+    }
+  }
+
+  const sorted = items.slice().sort((a,b) => b.value - a.value);
+  return subdivide(sorted, x, y, w, h, horizontal);
+}
+
+function getBarRaceFrame(dataset, progress){
+  const frames = Math.max(1, dataset.frameLabels.length);
+  const scaled = frames === 1 ? 0 : progress * (frames - 1);
+  const baseIndex = Math.max(0, Math.min(frames - 1, Math.floor(scaled)));
+  const nextIndex = Math.max(0, Math.min(frames - 1, baseIndex + 1));
+  const t = Math.max(0, Math.min(1, scaled - baseIndex));
+
+  const baseRanking = dataset.items.map(item => ({
+    idx: item.idx,
+    value: item.values[baseIndex] ?? 0
+  })).sort((a, b) => {
+    if(b.value !== a.value) return b.value - a.value;
+    return a.idx - b.idx;
+  });
+
+  const nextRanking = dataset.items.map(item => ({
+    idx: item.idx,
+    value: item.values[nextIndex] ?? 0
+  })).sort((a, b) => {
+    if(b.value !== a.value) return b.value - a.value;
+    return a.idx - b.idx;
+  });
+
+  const posA = {};
+  const posB = {};
+  baseRanking.forEach((item, i) => posA[item.idx] = i + 1);
+  nextRanking.forEach((item, i) => posB[item.idx] = i + 1);
+
+  let items = dataset.items.map(item => {
+    const a = item.values[baseIndex] ?? 0;
+    const b = item.values[nextIndex] ?? a;
+    const raw = a + (b - a) * t;
+    return {
+      idx: item.idx,
+      colorKey: item.idx,
+      label: item.label,
+      rawLabel: item.rawLabel,
+      rawValue: raw,
+      value: raw,
+      plotValue: raw,
+      rankA: posA[item.idx] || 1,
+      rankB: posB[item.idx] || 1,
+      rankPos: (posA[item.idx] || 1) + (((posB[item.idx] || 1) - (posA[item.idx] || 1)) * t)
+    };
+  });
+
+  if($('normalize100').checked && items.length){
+    const max = Math.max(...items.map(i => i.rawValue), 0);
+    items = items.map(item => ({
+      ...item,
+      plotValue: max > 0 ? (item.rawValue / max) * 100 : 0
+    }));
+  }
+
+  const limit = +$('xLimit').value || 8;
+  if(limit > 0){
+    items = items.filter(item => (
+      item.rankA <= limit ||
+      item.rankB <= limit ||
+      item.rankPos <= limit + 0.25
+    ));
+  }
+
+  items.sort((a,b) => {
+    if(a.rankPos !== b.rankPos) return a.rankPos - b.rankPos;
+    return a.idx - b.idx;
+  });
+
+  const frameLabel = dataset.frameLabels[baseIndex] || 'Frame 1';
+  return {items, frameLabel, visibleSlots: limit > 0 ? limit : dataset.items.length};
+}
+
+function getLineRaceVisibleSeries(dataset, progress){
+  const reveal = Math.max(0, Math.min(1, progress));
+  const count = dataset.xLabels.length;
+  const seriesCount = dataset.series.length;
+  if(!count || !seriesCount) return {series: [], xLabels: dataset.xLabels, rankMax: 0};
+
+  const frameRanks = Array.from({length: count}, (_, frameIndex) => {
+    const ranking = dataset.series.map(seriesItem => ({
+      idx: seriesItem.idx,
+      value: seriesItem.values[frameIndex] ?? 0
+    })).sort((a, b) => {
+      if(b.value !== a.value) return b.value - a.value;
+      return a.idx - b.idx;
+    });
+
+    const rankMap = {};
+    ranking.forEach((entry, rankIndex) => {
+      rankMap[entry.idx] = rankIndex + 1;
+    });
+    return rankMap;
+  });
+
+  const lastVisible = reveal * (count - 1);
+  const whole = Math.floor(lastVisible);
+  const frac = lastVisible - whole;
+
+  const series = dataset.series.map(seriesItem => {
+    const pts = [];
+    for(let i = 0; i <= whole && i < count; i++){
+      const rank = frameRanks[i][seriesItem.idx];
+      pts.push({
+        xLabel: dataset.xLabels[i],
+        rawXLabel: dataset.rawXLabels[i],
+        rawValue: seriesItem.values[i] ?? 0,
+        plotValue: rank,
+        rankValue: rank,
+        idx: seriesItem.idx
+      });
+    }
+
+    if(whole < count - 1){
+      const rankA = frameRanks[whole][seriesItem.idx];
+      const rankB = frameRanks[whole + 1][seriesItem.idx];
+      const valueA = seriesItem.values[whole] ?? 0;
+      const valueB = seriesItem.values[whole + 1] ?? valueA;
+      pts.push({
+        xLabel: dataset.xLabels[whole + 1],
+        rawXLabel: dataset.rawXLabels[whole + 1],
+        rawValue: valueA + (valueB - valueA) * frac,
+        plotValue: rankA + (rankB - rankA) * frac,
+        rankValue: rankA + (rankB - rankA) * frac,
+        idx: seriesItem.idx,
+        interpolated: true
+      });
+    }
+
+    return {
+      idx: seriesItem.idx,
+      label: seriesItem.label,
+      points: pts
+    };
+  });
+
+  return {series, xLabels: dataset.xLabels, rawXLabels: dataset.rawXLabels, rankMax: seriesCount};
+}
+
+
+function formatRankLabel(rank){
+  const n = Math.max(1, Math.round(rank));
+  return `${n}º`;
+}
+
+function draw(){
+  const rect = canvas.getBoundingClientRect();
+  const w = rect.width, h = rect.height;
+  ctx.clearRect(0,0,w,h);
+  state.hitRegions = [];
+
+  const progress = getRenderProgress();
+
+  if(chartType === 'barRace'){
+    const dataset = getBarRaceDataset();
+    if(!dataset.items.length || !dataset.frameLabels.length){
+      drawEmptyState('Bar Chart Race precisa de 3 ou mais colunas', '1ª coluna = cronologia/período • demais colunas = categorias');
+      return;
+    }
+    drawBarRace(dataset, w, h, progress);
+    return;
+  }
+
+  if(chartType === 'lineRace'){
+    const dataset = getLineRaceDataset();
+    if(!dataset.series.length || dataset.xLabels.length < 2){
+      drawEmptyState('Line Chart Race (rank) precisa de 3 ou mais colunas', '1ª coluna = cronologia/período • demais colunas = categorias');
+      return;
+    }
+    drawLineRace(dataset, w, h, progress);
+    return;
+  }
+
+  const data = getData();
+  if(!data.length){
+    drawEmptyState('Cole dados para gerar o gráfico');
+    return;
+  }
+
+  if(chartType === 'donut'){
+    drawDonut(data, w, h, progress);
+    return;
+  }
+
+  if(chartType === 'treemap'){
+    drawTreemap(data, w, h, progress);
+    return;
+  }
+
+  if(chartType === 'radar'){
+    drawRadar(data, w, h, progress);
+    return;
+  }
+
+  const axis = getYAxisConfig(data);
+  const hideValues = $('hideValues').checked;
+
+  if(chartType === 'bar') drawBar(data, w, h, axis, hideValues, progress);
+  if(chartType === 'column') drawColumn(data, w, h, axis, hideValues, progress);
+  if(chartType === 'line') drawLine(data, w, h, axis, hideValues, false, progress);
+  if(chartType === 'area') drawLine(data, w, h, axis, hideValues, true, progress);
+  if(chartType === 'lollipop') drawLollipop(data, w, h, axis, hideValues, progress);
+}
+
+function drawBar(data, w, h, axis, hideValues, progress){
+  const c = ctx;
+  const gap = Math.max(0, +$('barLabelGap').value || 0);
+  const radius = Math.max(0, +$('barRadius').value || 0);
+
+  const basePad = {
+    left: 12,
+    right: hideValues ? 12 : 42,
+    top: 10,
+    bottom: ($('showX').checked && $('xTitle').value.trim()) ? 24 : 8
+  };
+  const legendReserve = getLegendReserve(c, data, basePad, w, h);
+  const pad = {
+    left: basePad.left + (legendReserve.left || 0),
+    right: basePad.right + (legendReserve.right || 0),
+    top: basePad.top + (legendReserve.top || 0),
+    bottom: basePad.bottom + (legendReserve.bottom || 0)
+  };
+
+  const range = (axis.max - axis.min) || 1;
+  const plotHeight = Math.max(40, h - pad.top - pad.bottom);
+  const row = plotHeight / data.length;
+  const labelHeight = 12;
+
+  drawReferenceLinesForBar(data, w, h, pad, axis, row, labelHeight, gap);
+
+  data.forEach((d, i) => {
+    const rowTop = pad.top + i * row;
+    const trackY = rowTop + labelHeight + gap;
+    const maxBarHeight = Math.max(10, row - labelHeight - gap - 4);
+    const bh = Math.max(8, Math.min(row * 0.58, maxBarHeight));
+    const ratio = clamp((d.plotValue - axis.min) / range, 0, 1);
+    const usableWidth = Math.max(20, w - pad.left - pad.right);
+    const barW = Math.max(2, usableWidth * ratio * progress);
+
+    c.fillStyle = '#111827';
+    c.font = '600 11px Inter, sans-serif';
+    c.textAlign = 'left';
+    c.fillText(d.label, pad.left, rowTop + 10);
+
+    c.fillStyle = '#e9edf3';
+    roundedRect(c, pad.left, trackY, usableWidth, bh, radius);
+    c.fill();
+
+    c.fillStyle = itemColor(d.idx);
+    roundedRect(c, pad.left, trackY, barW, bh, radius);
+    c.fill();
+
+    if(state.selectedItems.has(d.idx)) drawSelectionOutlineRect(c, pad.left, trackY, barW, bh);
+    state.hitRegions.push({idx:d.idx, type:'rect', x:pad.left, y:trackY, w:barW, h:bh});
+
+    if(!hideValues && progress > 0.92){
+      c.fillStyle = '#111827';
+      c.font = '700 11px Inter, sans-serif';
+      c.textAlign = 'left';
+      c.fillText(fmt(d.rawValue), Math.min(pad.left + barW + 6, w - 34), trackY + bh / 2 + 4);
+    }
+  });
+
+  c.textAlign = 'left';
+  drawXAxisTitle(c, w, h, pad);
+  drawLegend(c, data, w, h, pad);
+}
+
+function drawColumn(data, w, h, axis, hideValues, progress){
+  const c = ctx;
+  const basePad = {
+    left: $('showY').checked ? ($('yTitle').value.trim() ? 54 : 42) : 8,
+    right: 10,
+    top: hideValues ? 8 : 22,
+    bottom: getBottomReserve(c, data, true)
+  };
+  const legendReserve = getLegendReserve(c, data, basePad, w, h);
+  const pad = {
+    left: basePad.left + (legendReserve.left || 0),
+    right: basePad.right + (legendReserve.right || 0),
+    top: basePad.top + (legendReserve.top || 0),
+    bottom: basePad.bottom + (legendReserve.bottom || 0)
+  };
+
+  const range = (axis.max - axis.min) || 1;
+  const base = h - pad.bottom;
+  const inner = Math.max(20, w - pad.left - pad.right);
+  const cell = inner / data.length;
+
+  drawYAxis(c, w, h, pad, axis);
+  drawReferenceLinesForColumn(data, w, h, pad, axis);
+
+  data.forEach((d, i) => {
+    const ratio = clamp((d.plotValue - axis.min) / range, 0, 1);
+    const bw = Math.max(6, cell * 0.68);
+    const bh = Math.max(2, (h - pad.top - pad.bottom) * ratio * progress);
+    const x = pad.left + i * cell + (cell - bw) / 2;
+    const y = base - bh;
+
+    c.fillStyle = itemColor(d.idx);
+    roundedRect(c, x, y, bw, bh, Math.max(0, +$('barRadius').value || 0));
+    c.fill();
+
+    if(state.selectedItems.has(d.idx)) drawSelectionOutlineRect(c, x, y, bw, bh);
+    state.hitRegions.push({idx:d.idx, type:'rect', x, y, w:bw, h:bh});
+
+    if(!hideValues && progress > 0.92){
+      c.fillStyle = '#111827';
+      c.font = '700 10px Inter, sans-serif';
+      c.textAlign = 'center';
+      c.fillText(fmt(d.rawValue), x + bw / 2, Math.max(10, y - 6));
+    }
+
+    if($('showX').checked && shouldShowXLabel(d, i, data)){
+      drawRotatedLabel(c, d.label, x + bw / 2, base + 16);
+    }
+  });
+
+  drawXAxisTitle(c, w, h, pad);
+  drawLegend(c, data, w, h, pad);
+  c.textAlign = 'left';
+}
+
+function drawSmoothPath(c, pts){
+  if(!pts.length) return;
+  c.moveTo(pts[0].x, pts[0].y);
+  if(pts.length === 1) return;
+  for(let i = 0; i < pts.length - 1; i++){
+    const p0 = pts[i === 0 ? i : i - 1];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[i + 2 < pts.length ? i + 2 : i + 1];
+    const cp1x = p1.x + (p2.x - p0.x) / 6;
+    const cp1y = p1.y + (p2.y - p0.y) / 6;
+    const cp2x = p2.x - (p3.x - p1.x) / 6;
+    const cp2y = p2.y - (p3.y - p1.y) / 6;
+    c.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+  }
+}
+
+function buildAnimatedLinePoints(data, pad, axis, progress){
+  const range = (axis.max - axis.min) || 1;
+  const innerW = Math.max(20, pad.innerW);
+  const innerH = Math.max(20, pad.innerH);
+
+  const fullPts = data.map((d, i) => ({
+    d,
+    x: pad.left + (data.length === 1 ? innerW / 2 : i * innerW / (data.length - 1)),
+    y: pad.top + innerH * (1 - (d.plotValue - axis.min) / range)
+  }));
+
+  const reveal = progress * Math.max(0, data.length - 1);
+  const whole = Math.floor(reveal);
+  const frac = reveal - whole;
+  const pts = [];
+
+  for(let i = 0; i <= whole && i < fullPts.length; i++) pts.push(fullPts[i]);
+
+  if(whole < fullPts.length - 1){
+    const a = fullPts[whole];
+    const b = fullPts[whole + 1];
+    pts.push({
+      d: {...b.d},
+      x: a.x + (b.x - a.x) * frac,
+      y: a.y + (b.y - a.y) * frac,
+      interpolated: true
+    });
+  }
+
+  return {pts, fullPts};
+}
+
+function drawLine(data, w, h, axis, hideValues, fillArea, progress){
+  const c = ctx;
+  const basePad = {
+    left: $('showY').checked ? ($('yTitle').value.trim() ? 54 : 42) : 8,
+    right: 10,
+    top: hideValues ? 8 : 22,
+    bottom: getBottomReserve(c, data, true)
+  };
+  const legendReserve = getLegendReserve(c, data, basePad, w, h);
+  const pad = {
+    left: basePad.left + (legendReserve.left || 0),
+    right: basePad.right + (legendReserve.right || 0),
+    top: basePad.top + (legendReserve.top || 0),
+    bottom: basePad.bottom + (legendReserve.bottom || 0)
+  };
+  pad.innerW = Math.max(20, w - pad.left - pad.right);
+  pad.innerH = Math.max(20, h - pad.top - pad.bottom);
+
+  const hidePoints = $('hideLinePoints').checked;
+  const smooth = $('smoothCurves').checked;
+
+  drawYAxis(c, w, h, pad, axis);
+  drawReferenceLinesForLine(data, w, h, pad, axis);
+
+  const {pts} = buildAnimatedLinePoints(data, pad, axis, progress);
+  if(!pts.length) return;
+
+  let lineColor = $('globalColor').value;
+  let lineWidth = Math.max(1, +$('areaLineWidth').value || 1);
+  let fillColor = 'rgba(91,108,255,.14)';
+
+  if(fillArea){
+    const baseColor = $('areaColor').value;
+    const areaOpacity = Math.max(0, Math.min(100, +$('areaFillOpacity').value || 0)) / 100;
+    const areaLineOpacity = Math.max(0, Math.min(100, +$('areaLineOpacity').value || 0)) / 100;
+    fillColor = hexToRgba(baseColor, areaOpacity);
+    lineColor = hexToRgba(baseColor, areaLineOpacity);
+  } else {
+    const normalOpacity = Math.max(0, Math.min(100, +$('areaLineOpacity').value || 100)) / 100;
+    lineColor = hexToRgba($('globalColor').value, normalOpacity);
+  }
+
+  if(fillArea){
+    c.beginPath();
+    c.moveTo(pts[0].x, h - pad.bottom);
+    if(smooth && pts.length > 1){
+      c.lineTo(pts[0].x, pts[0].y);
+      drawSmoothPath(c, pts);
+    } else {
+      pts.forEach(p => c.lineTo(p.x, p.y));
+    }
+    c.lineTo(pts[pts.length - 1].x, h - pad.bottom);
+    c.closePath();
+    c.fillStyle = fillColor;
+    c.fill();
+  }
+
+  c.beginPath();
+  if(smooth && pts.length > 1) drawSmoothPath(c, pts);
+  else pts.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+  c.strokeStyle = lineColor;
+  c.lineWidth = lineWidth;
+  c.lineCap = 'round';
+  c.lineJoin = 'round';
+  c.stroke();
+
+  pts.forEach((p, i) => {
+    if(!hidePoints && !p.interpolated){
+      const pointRadius = Math.max(4, lineWidth + 1);
+      c.fillStyle = fillArea ? lineColor : itemColor(p.d.idx);
+      c.beginPath();
+      c.arc(p.x, p.y, pointRadius, 0, Math.PI * 2);
+      c.fill();
+
+      if(state.selectedItems.has(p.d.idx)) drawSelectionOutlineCircle(c, p.x, p.y, pointRadius);
+      state.hitRegions.push({idx:p.d.idx, type:'circle', x:p.x, y:p.y, r:Math.max(8, pointRadius + 3)});
+    }
+
+    if(!hideValues && !p.interpolated && progress > 0.92){
+      c.fillStyle = '#111827';
+      c.font = '700 10px Inter, sans-serif';
+      c.textAlign = 'center';
+      c.fillText(fmt(p.d.rawValue), p.x, p.y - 11);
+    }
+
+    const originalIndex = data.findIndex(item => item.idx === p.d.idx);
+    if($('showX').checked && !p.interpolated && shouldShowXLabel(p.d, originalIndex, data)){
+      drawRotatedLabel(c, p.d.label, p.x, h - pad.bottom + 16);
+    }
+  });
+
+  drawXAxisTitle(c, w, h, pad);
+  drawLegend(c, data, w, h, pad);
+  c.textAlign = 'left';
+}
+
+function drawLollipop(data, w, h, axis, hideValues, progress){
+  const c = ctx;
+  const labelWidth = getMaxTextWidth(c, data.map(d => d.label), '600 11px Inter, sans-serif');
+  const basePad = {
+    left: Math.ceil(labelWidth) + 18,
+    right: hideValues ? 12 : 42,
+    top: 10,
+    bottom: ($('showX').checked && $('xTitle').value.trim()) ? 24 : 8
+  };
+  const legendReserve = getLegendReserve(c, data, basePad, w, h);
+  const pad = {
+    left: basePad.left + (legendReserve.left || 0),
+    right: basePad.right + (legendReserve.right || 0),
+    top: basePad.top + (legendReserve.top || 0),
+    bottom: basePad.bottom + (legendReserve.bottom || 0)
+  };
+
+  const range = (axis.max - axis.min) || 1;
+  const row = Math.max(20, h - pad.top - pad.bottom) / data.length;
+  drawReferenceLinesForLollipop(data, w, h, pad, axis, row);
+
+  data.forEach((d, i) => {
+    const cy = pad.top + i * row + row * .5;
+    const ratio = clamp((d.plotValue - axis.min) / range, 0, 1);
+    const usableWidth = Math.max(20, w - pad.left - pad.right);
+    const x = pad.left + usableWidth * ratio * progress;
+
+    c.strokeStyle = '#d9dee7';
+    c.lineWidth = 2;
+    c.beginPath();
+    c.moveTo(pad.left, cy);
+    c.lineTo(w - pad.right, cy);
+    c.stroke();
+
+    c.strokeStyle = itemColor(d.idx);
+    c.lineWidth = 3;
+    c.beginPath();
+    c.moveTo(pad.left, cy);
+    c.lineTo(x, cy);
+    c.stroke();
+
+    c.fillStyle = itemColor(d.idx);
+    c.beginPath();
+    c.arc(x, cy, 7, 0, Math.PI * 2);
+    c.fill();
+
+    if(state.selectedItems.has(d.idx)) drawSelectionOutlineCircle(c, x, cy, 7);
+    state.hitRegions.push({idx:d.idx, type:'circle', x:x, y:cy, r:10});
+
+    c.fillStyle = '#111827';
+    c.font = '600 11px Inter, sans-serif';
+    c.textAlign = 'right';
+    c.fillText(d.label, pad.left - 8, cy + 4);
+
+    if(!hideValues && progress > 0.92){
+      c.textAlign = 'left';
+      c.font = '700 11px Inter, sans-serif';
+      c.fillText(fmt(d.rawValue), Math.min(x + 12, w - 34), cy + 4);
+    }
+  });
+
+  c.textAlign = 'left';
+  drawXAxisTitle(c, w, h, pad);
+  drawLegend(c, data, w, h, pad);
+}
+
+function drawDonut(data, w, h, progress){
+  const c = ctx, hideValues = $('hideValues').checked;
+  const basePad = {left:10, right:10, top:10, bottom:10};
+  const legendReserve = getLegendReserve(c, data, basePad, w, h);
+  const pad = {
+    left: basePad.left + (legendReserve.left || 0),
+    right: basePad.right + (legendReserve.right || 0),
+    top: basePad.top + (legendReserve.top || 0),
+    bottom: basePad.bottom + (legendReserve.bottom || 0)
+  };
+
+  const drawableW = Math.max(40, w - pad.left - pad.right);
+  const drawableH = Math.max(40, h - pad.top - pad.bottom);
+  const total = data.reduce((sum, d) => sum + d.plotValue, 0) || 1;
+  const cx = pad.left + drawableW * .5;
+  const cy = pad.top + drawableH * .5;
+  const r = Math.min(drawableW, drawableH) * .42;
+  const th = Math.max(16, r * .34);
+  let a = -Math.PI / 2;
+  const totalSweep = Math.PI * 2 * progress;
+
+  data.forEach((d, i) => {
+    const da = Math.PI * 2 * d.plotValue / total;
+    const end = Math.min(a + da, -Math.PI / 2 + totalSweep);
+    if(end > a){
+      c.beginPath();
+      c.arc(cx, cy, r, a, end);
+      c.strokeStyle = itemColor(d.idx);
+      c.lineWidth = th;
+      c.stroke();
+      state.hitRegions.push({idx:d.idx, type:'arc', cx, cy, r, th, start:a, end});
+      if(state.selectedItems.has(d.idx)){
+        c.save();
+        c.strokeStyle = '#111827';
+        c.lineWidth = 2;
+        c.setLineDash([4,3]);
+        c.beginPath();
+        c.arc(cx, cy, r, a, end);
+        c.stroke();
+        c.restore();
+      }
+    }
+    a += da;
+  });
+
+  if(!hideValues && progress > 0.92){
+    c.fillStyle = '#111827';
+    c.font = '800 24px Inter, sans-serif';
+    c.textAlign = 'center';
+    c.fillText($('normalize100').checked ? '100' : fmt(data.reduce((sum, d) => sum + d.rawValue, 0)), cx, cy + 4);
+  }
+
+  drawLegend(c, data, w, h, pad);
+}
+
+function drawBarRace(dataset, w, h, progress){
+  const frame = getBarRaceFrame(dataset, progress);
+  const data = frame.items;
+  const c = ctx;
+  if(!data.length){
+    drawEmptyState('Sem dados para o Bar Chart Race');
+    return;
+  }
+
+  const hideValues = $('hideValues').checked;
+  const labelWidth = getMaxTextWidth(c, data.map(d => d.label), '700 12px Inter, sans-serif');
+  const basePad = {
+    left: Math.ceil(labelWidth) + 18,
+    right: hideValues ? 18 : 52,
+    top: 32,
+    bottom: 12
+  };
+  const legendReserve = getLegendReserve(c, data, basePad, w, h);
+  const pad = {
+    left: basePad.left + (legendReserve.left || 0),
+    right: basePad.right + (legendReserve.right || 0),
+    top: basePad.top + (legendReserve.top || 0),
+    bottom: basePad.bottom + (legendReserve.bottom || 0)
+  };
+
+  const values = data.map(d => d.plotValue);
+  const axis = getAxisConfigFromValues(values);
+  const range = (axis.max - axis.min) || 1;
+  const visibleSlots = Math.max(1, frame.visibleSlots || data.length);
+  const row = Math.max(26, h - pad.top - pad.bottom) / visibleSlots;
+  const radius = Math.max(0, +$('barRadius').value || 0);
+
+  c.fillStyle = '#667085';
+  c.font = '700 11px Inter, sans-serif';
+  c.textAlign = 'right';
+  c.fillText(frame.frameLabel, w - pad.right, 18);
+
+  const drawableWidth = Math.max(30, w - pad.left - pad.right);
+
+  data.forEach(d => {
+    const y = pad.top + (d.rankPos - 1) * row + row * .18;
+    const bh = Math.min(row * .62, row - 8);
+    const ratio = clamp((d.plotValue - axis.min) / range, 0, 1);
+    const bw = drawableWidth * ratio;
+
+    c.fillStyle = '#eef2f6';
+    roundedRect(c, pad.left, y, drawableWidth, bh, radius);
+    c.fill();
+
+    c.fillStyle = itemColor(d.colorKey ?? d.idx);
+    roundedRect(c, pad.left, y, bw, bh, radius);
+    c.fill();
+
+    c.fillStyle = '#111827';
+    c.font = '700 12px Inter, sans-serif';
+    c.textAlign = 'right';
+    c.fillText(d.label, pad.left - 8, y + bh * .6);
+
+    c.fillStyle = '#667085';
+    c.font = '600 10px Inter, sans-serif';
+    c.textAlign = 'right';
+    c.fillText(formatRankLabel(d.rankPos), pad.left - 8, y - 4);
+
+    if(!hideValues){
+      c.fillStyle = '#111827';
+      c.font = '700 12px Inter, sans-serif';
+      c.textAlign = 'left';
+      c.fillText(fmt(d.rawValue), Math.min(pad.left + bw + 8, w - 34), y + bh * .6);
+    }
+
+    if(state.selectedItems.has(d.idx)) drawSelectionOutlineRect(c, pad.left, y, bw, bh);
+    state.hitRegions.push({idx:d.idx, type:'rect', x:pad.left, y, w:bw, h:bh});
+  });
+
+  drawLegend(c, data, w, h, pad);
+  c.textAlign = 'left';
+}
+
+function drawLineRace(dataset, w, h, progress){
+  const c = ctx;
+  const visible = getLineRaceVisibleSeries(dataset, progress);
+  if(!visible.series.length){
+    drawEmptyState('Sem dados para o Line Chart Race');
+    return;
+  }
+
+  const legendData = visible.series.map(s => ({idx:s.idx, label:s.label, rawLabel:s.label}));
+  const rankMax = Math.max(1, visible.rankMax || visible.series.length);
+
+  const basePad = {
+    left: $('showY').checked ? 64 : 8,
+    right: 72,
+    top: 10,
+    bottom: getBottomReserve(c, legendData, true)
+  };
+  const legendReserve = getLegendReserve(c, legendData, basePad, w, h);
+  const pad = {
+    left: basePad.left + (legendReserve.left || 0),
+    right: basePad.right + (legendReserve.right || 0),
+    top: basePad.top + (legendReserve.top || 0),
+    bottom: basePad.bottom + (legendReserve.bottom || 0)
+  };
+
+  const innerW = Math.max(20, w - pad.left - pad.right);
+  const innerH = Math.max(20, h - pad.top - pad.bottom);
+  const hidePoints = $('hideLinePoints').checked;
+  const smooth = $('smoothCurves').checked;
+  const lineWidth = Math.max(1, +$('areaLineWidth').value || 1);
+  const xCount = dataset.xLabels.length;
+  const fullX = idx => pad.left + (xCount === 1 ? innerW / 2 : idx * innerW / (xCount - 1));
+  const yFromRank = rank => {
+    if(rankMax <= 1) return pad.top + innerH / 2;
+    return pad.top + ((rank - 1) / (rankMax - 1)) * innerH;
+  };
+
+  // rank grid / axis
+  if($('showY').checked){
+    c.strokeStyle = '#e1e5ec';
+    c.fillStyle = '#667085';
+    c.lineWidth = 1;
+    c.font = '10px Inter, sans-serif';
+    c.textAlign = 'right';
+
+    for(let rank = 1; rank <= rankMax; rank++){
+      const y = yFromRank(rank);
+      c.beginPath();
+      c.moveTo(pad.left, y);
+      c.lineTo(w - pad.right, y);
+      c.stroke();
+      c.fillText(formatRankLabel(rank), pad.left - 8, y + 3);
+    }
+
+    const title = ($('yTitle').value || '').trim() || 'Ranking';
+    c.save();
+    c.translate(14, h / 2);
+    c.rotate(-Math.PI / 2);
+    c.textAlign = 'center';
+    c.font = '600 10px Inter, sans-serif';
+    c.fillText(title, 0, 0);
+    c.restore();
+  }
+
+  visible.series.forEach(series => {
+    const pts = series.points.map((p, i) => ({
+      ...p,
+      x: fullX(i),
+      y: yFromRank(p.plotValue)
+    }));
+
+    if(!pts.length) return;
+
+    c.beginPath();
+    if(smooth && pts.length > 1) drawSmoothPath(c, pts);
+    else pts.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+
+    const stroke = hexToRgba(itemColor(series.idx), Math.max(0, Math.min(100, +$('areaLineOpacity').value || 100)) / 100);
+    c.strokeStyle = stroke;
+    c.lineWidth = lineWidth;
+    c.lineCap = 'round';
+    c.lineJoin = 'round';
+    c.stroke();
+
+    pts.forEach((p, pointIndex) => {
+      const isLastVisible = pointIndex === pts.length - 1;
+
+      if(!hidePoints && !p.interpolated){
+        c.fillStyle = itemColor(series.idx);
+        c.beginPath();
+        c.arc(p.x, p.y, Math.max(4, lineWidth + 1), 0, Math.PI * 2);
+        c.fill();
+      }
+
+      state.hitRegions.push({idx:series.idx, type:'circle', x:p.x, y:p.y, r:10});
+
+      if(!p.interpolated && state.selectedItems.has(series.idx)){
+        drawSelectionOutlineCircle(c, p.x, p.y, Math.max(4, lineWidth + 1));
+      }
+
+      if(isLastVisible){
+        c.fillStyle = itemColor(series.idx);
+        c.font = '700 11px Inter, sans-serif';
+        c.textAlign = 'left';
+        c.fillText(series.label, Math.min(p.x + 10, w - pad.right + 4), p.y + 4);
+
+        c.fillStyle = '#667085';
+        c.font = '600 10px Inter, sans-serif';
+        c.fillText(formatRankLabel(p.plotValue), Math.min(p.x + 10, w - pad.right + 4), p.y - 9);
+      }
+    });
+  });
+
+  if($('showX').checked){
+    const xItems = dataset.xLabels.map((label, idx) => ({label, rawLabel: dataset.rawXLabels[idx]}));
+    dataset.xLabels.forEach((label, i) => {
+      const item = {label, rawLabel: dataset.rawXLabels[i]};
+      if(shouldShowXLabel(item, i, xItems)){
+        drawRotatedLabel(c, label, fullX(i), h - pad.bottom + 16);
+      }
+    });
+  }
+
+  drawXAxisTitle(c, w, h, pad);
+  drawLegend(c, legendData, w, h, pad);
+  c.textAlign = 'left';
+}
+
+function drawTreemap(data, w, h, progress){
+  const c = ctx;
+  const hideValues = $('hideValues').checked;
+  const legendReserve = getLegendReserve(c, data, {left:8,right:8,top:8,bottom:8}, w, h);
+  const pad = {left:8 + (legendReserve.left || 0), right:8 + (legendReserve.right || 0), top:8 + (legendReserve.top || 0), bottom:8 + (legendReserve.bottom || 0)};
+  const rects = getSimpleSliceRects(
+    data.map(d => ({idx:d.idx, label:d.label, rawValue:d.rawValue, value:Math.max(0, d.plotValue)})),
+    pad.left,
+    pad.top,
+    Math.max(40, w - pad.left - pad.right),
+    Math.max(40, h - pad.top - pad.bottom)
+  );
+
+  rects.forEach(item => {
+    const cx = item.x + item.w / 2;
+    const cy = item.y + item.h / 2;
+    const rw = item.w * progress;
+    const rh = item.h * progress;
+    const rx = cx - rw / 2;
+    const ry = cy - rh / 2;
+
+    c.fillStyle = itemColor(item.idx);
+    roundedRect(c, rx, ry, rw, rh, 8);
+    c.fill();
+
+    if(state.selectedItems.has(item.idx)) drawSelectionOutlineRect(c, rx, ry, rw, rh);
+    state.hitRegions.push({idx:item.idx, type:'rect', x:rx, y:ry, w:rw, h:rh});
+
+    if(progress > 0.55){
+      c.fillStyle = '#ffffff';
+      c.font = '700 11px Inter, sans-serif';
+      c.textAlign = 'left';
+      c.fillText(item.label, rx + 8, ry + 16);
+      if(!hideValues && rw > 60 && rh > 40){
+        c.font = '600 10px Inter, sans-serif';
+        c.fillText(fmt(item.rawValue), rx + 8, ry + 30);
+      }
+    }
+  });
+
+  drawLegend(c, data, w, h, pad);
+}
+
+function drawRadar(data, w, h, progress){
+  const c = ctx;
+  const hideValues = $('hideValues').checked;
+  const legendReserve = getLegendReserve(c, data, {left:20,right:20,top:20,bottom:20}, w, h);
+  const pad = {left:20 + (legendReserve.left || 0), right:20 + (legendReserve.right || 0), top:20 + (legendReserve.top || 0), bottom:20 + (legendReserve.bottom || 0)};
+  const drawableW = Math.max(80, w - pad.left - pad.right);
+  const drawableH = Math.max(80, h - pad.top - pad.bottom);
+  const cx = pad.left + drawableW / 2;
+  const cy = pad.top + drawableH / 2;
+  const radius = Math.min(drawableW, drawableH) * 0.36;
+  const count = data.length;
+  const maxVal = $('normalize100').checked ? 100 : Math.max(...data.map(d => d.plotValue), 1);
+
+  // grid
+  for(let ring = 1; ring <= 5; ring++){
+    const rr = radius * (ring / 5);
+    c.beginPath();
+    data.forEach((d, i) => {
+      const a = -Math.PI / 2 + (Math.PI * 2 * i / count);
+      const x = cx + Math.cos(a) * rr;
+      const y = cy + Math.sin(a) * rr;
+      i ? c.lineTo(x, y) : c.moveTo(x, y);
+    });
+    c.closePath();
+    c.strokeStyle = '#e5e7eb';
+    c.lineWidth = 1;
+    c.stroke();
+  }
+
+  data.forEach((d, i) => {
+    const a = -Math.PI / 2 + (Math.PI * 2 * i / count);
+    const x = cx + Math.cos(a) * radius;
+    const y = cy + Math.sin(a) * radius;
+
+    c.strokeStyle = '#e5e7eb';
+    c.beginPath();
+    c.moveTo(cx, cy);
+    c.lineTo(x, y);
+    c.stroke();
+
+    c.fillStyle = '#667085';
+    c.font = '10px Inter, sans-serif';
+    c.textAlign = Math.cos(a) > 0.2 ? 'left' : (Math.cos(a) < -0.2 ? 'right' : 'center');
+    c.fillText(d.label, cx + Math.cos(a) * (radius + 14), cy + Math.sin(a) * (radius + 14));
+  });
+
+  c.beginPath();
+  const pts = data.map((d, i) => {
+    const ratio = clamp((d.plotValue / maxVal), 0, 1) * progress;
+    const a = -Math.PI / 2 + (Math.PI * 2 * i / count);
+    const x = cx + Math.cos(a) * radius * ratio;
+    const y = cy + Math.sin(a) * radius * ratio;
+    return {x, y, idx:d.idx, rawValue:d.rawValue};
+  });
+  pts.forEach((p, i) => i ? c.lineTo(p.x, p.y) : c.moveTo(p.x, p.y));
+  c.closePath();
+  c.fillStyle = hexToRgba($('areaColor').value, Math.max(0, Math.min(100, +$('areaFillOpacity').value || 14)) / 100);
+  c.strokeStyle = hexToRgba($('areaColor').value, Math.max(0, Math.min(100, +$('areaLineOpacity').value || 100)) / 100);
+  c.lineWidth = Math.max(1, +$('areaLineWidth').value || 1);
+  c.fill();
+  c.stroke();
+
+  pts.forEach((p, i) => {
+    c.fillStyle = itemColor(i);
+    c.beginPath();
+    c.arc(p.x, p.y, Math.max(4, +$('areaLineWidth').value || 3), 0, Math.PI * 2);
+    c.fill();
+    state.hitRegions.push({idx:data[i].idx, type:'circle', x:p.x, y:p.y, r:10});
+    if(state.selectedItems.has(data[i].idx)) drawSelectionOutlineCircle(c, p.x, p.y, Math.max(4, +$('areaLineWidth').value || 3));
+    if(!hideValues && progress > 0.92){
+      c.fillStyle = '#111827';
+      c.font = '700 10px Inter, sans-serif';
+      c.textAlign = 'center';
+      c.fillText(fmt(data[i].rawValue), p.x, p.y - 10);
+    }
+  });
+
+  drawLegend(c, data, w, h, pad);
+}
+function hitTest(x, y){
+  for(let i=state.hitRegions.length-1; i>=0; i--){
+    const r = state.hitRegions[i];
+    if(r.type === 'rect'){
+      if(x >= r.x && x <= r.x+r.w && y >= r.y && y <= r.y+r.h) return r.idx;
+    }
+    if(r.type === 'circle'){
+      const dx=x-r.x, dy=y-r.y;
+      if(Math.sqrt(dx*dx+dy*dy) <= r.r) return r.idx;
+    }
+    if(r.type === 'arc'){
+      const dx=x-r.cx, dy=y-r.cy;
+      const dist=Math.sqrt(dx*dx+dy*dy);
+      let ang=Math.atan2(dy,dx);
+      if(ang < -Math.PI/2) ang += Math.PI*2;
+      let start=r.start, end=r.end;
+      while(start < -Math.PI/2){ start += Math.PI*2; end += Math.PI*2; }
+      if(dist >= r.r-r.th/2-8 && dist <= r.r+r.th/2+8 && ang >= start && ang <= end) return r.idx;
+    }
+  }
+  return null;
+}
+
+function chartPointerDown(e){
+  if(e.target.classList.contains('resize-handle')){
+    e.preventDefault();
+    state.dragMode = 'resize';
+    state.dragHandle = e.target.dataset.handle;
+    $('chartBox').classList.add('resizing');
+  } else if(e.target === canvas || e.target === $('chartBox')){
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const hit = hitTest(x, y);
+    if(hit !== null){
+      selectItem(hit, e.shiftKey || e.ctrlKey || e.metaKey);
+      return;
+    }
+    e.preventDefault();
+    state.dragMode = 'move';
+    $('chartBox').classList.add('dragging');
+  } else {
+    return;
+  }
+  state.startMouseX = e.clientX;
+  state.startMouseY = e.clientY;
+  state.startMargins = {...state.margins};
+}
+
+function chartPointerMove(e){
+  if(!state.dragMode) return;
+  const stage = $('stage');
+  const dx = e.clientX - state.startMouseX;
+  const dy = e.clientY - state.startMouseY;
+  const minW = 140, minH = 140;
+
+  if(state.dragMode === 'move'){
+    let left = state.startMargins.left + dx;
+    let top = state.startMargins.top + dy;
+    const width = stage.clientWidth - state.startMargins.left - state.startMargins.right;
+    const height = stage.clientHeight - state.startMargins.top - state.startMargins.bottom;
+    left = clamp(left, 0, stage.clientWidth - width);
+    top = clamp(top, 0, stage.clientHeight - height);
+    let right = stage.clientWidth - left - width;
+    let bottom = stage.clientHeight - top - height;
+    state.margins.left = left;
+    state.margins.right = right;
+    state.margins.top = top;
+    state.margins.bottom = bottom;
+  }
+
+  if(state.dragMode === 'resize'){
+    let left = state.startMargins.left;
+    let right = state.startMargins.right;
+    let top = state.startMargins.top;
+    let bottom = state.startMargins.bottom;
+
+    if(state.dragHandle.includes('w')) left = clamp(state.startMargins.left + dx, 0, stage.clientWidth - state.startMargins.right - minW);
+    if(state.dragHandle.includes('e')) right = clamp(state.startMargins.right - dx, 0, stage.clientWidth - left - minW);
+    if(state.dragHandle.includes('n')) top = clamp(state.startMargins.top + dy, 0, stage.clientHeight - state.startMargins.bottom - minH);
+    if(state.dragHandle.includes('s')) bottom = clamp(state.startMargins.bottom - dy, 0, stage.clientHeight - top - minH);
+
+    state.margins.left = left;
+    state.margins.right = right;
+    state.margins.top = top;
+    state.margins.bottom = bottom;
+  }
+
+  applyChartBox();
+}
+
+function chartPointerUp(){
+  state.dragMode = null;
+  state.dragHandle = null;
+  $('chartBox').classList.remove('dragging');
+  $('chartBox').classList.remove('resizing');
+}
+
+function applyColorToAll(){
+  const d = getData();
+  const color = $('globalColor').value;
+  d.forEach(item => state.itemColors[item.idx] = color);
+  renderItemList();
+  draw();
+}
+
+function applyColorToSelected(){
+  const color = $('selectedColor').value;
+  state.selectedItems.forEach(idx => state.itemColors[idx] = color);
+  renderItemList();
+  draw();
+}
+
+function exportPNG(){
+  const stage = $('stage');
+  const rect = stage.getBoundingClientRect();
+  const exportCanvas = document.createElement('canvas');
+  const dpr = 2;
+  exportCanvas.width = Math.round(rect.width * dpr);
+  exportCanvas.height = Math.round(rect.height * dpr);
+  const ex = exportCanvas.getContext('2d');
+  ex.scale(dpr,dpr);
+  ex.fillStyle = '#ffffff';
+  ex.fillRect(0,0,rect.width,rect.height);
+  const chartRect = $('chartBox').getBoundingClientRect();
+  const stageRect = stage.getBoundingClientRect();
+  ex.drawImage(canvas, chartRect.left-stageRect.left, chartRect.top-stageRect.top, chartRect.width, chartRect.height);
+  const a = document.createElement('a');
+  a.download = 'grafico.png';
+  a.href = exportCanvas.toDataURL('image/png');
+  a.click();
+}
+
+document.querySelectorAll('.tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(x => x.classList.remove('active'));
+    btn.classList.add('active');
+    $(btn.dataset.tab + 'Panel').classList.add('active');
+  });
+});
+document.querySelectorAll('.type').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.type').forEach(x => x.classList.remove('active'));
+  btn.classList.add('active');
+  chartType = btn.dataset.type;
+  restartAnimation(true);
+}));
+document.querySelectorAll('.format-btn').forEach(btn => btn.addEventListener('click', () => setFormat(btn.dataset.format)));
+
+$('customWidth').addEventListener('input', updateCustomFormat);
+$('customHeight').addEventListener('input', updateCustomFormat);
+
+$('pasteSheetBtn').addEventListener('click', pasteFromClipboard);
+$('sheetWrap').addEventListener('paste', e => {
+  const text = e.clipboardData?.getData('text/plain') || '';
+  if(!text) return;
+  e.preventDefault();
+  loadTextIntoSheet(text);
+  restartAnimation(false);
+});
+
+$('csvFile').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    loadTextIntoSheet(r.result);
+    document.querySelector('[data-tab="manual"]').click();
+    restartAnimation(false);
+  };
+  r.readAsText(f, 'UTF-8');
+});
+
+['marginLeft','marginRight','marginTop','marginBottom'].forEach(id => {
+  $(id).addEventListener('input', () => {
+    readMarginInputs();
+    applyChartBox();
+  });
+});
+
+['hideValues','showX','showY','formatDates','dateFormat','xTitle','xLabelsMode','xCustomLabels','xRotation','xLimit','yTitle','yCustomTicks','refXOn','refXValue','refYOn','refYValue','refLineColor','refLineWidth','lockY','yMin','yMax','yStep','globalColor','normalize100','barLabelGap','barRadius','hideLinePoints','smoothCurves','areaColor','areaLineWidth','areaFillOpacity','areaLineOpacity','showLegend','legendDirection','legendAlign','legendHorizontalPos','legendVerticalPos','enableAnimation','animSpeed']
+.forEach(id => $(id).addEventListener('input', () => {
+  if(id === 'xLabelsMode'){
+    updateXCustomVisibility();
+    restartAnimation(false);
+  } else if(id === 'legendDirection'){
+    updateLegendControlVisibility();
+    renderItemList();
+    restartAnimation(false);
+  } else if(id === 'enableAnimation' || id === 'animSpeed'){
+    updateAnimationButtons();
+    restartAnimation(id === 'enableAnimation' ? $('enableAnimation').checked : true);
+  } else {
+    renderItemList();
+    restartAnimation(false);
+  }
+}));
+
+$('applyAllBtn').addEventListener('click', applyColorToAll);
+$('applySelectedBtn').addEventListener('click', applyColorToSelected);
+$('clearSelectionBtn').addEventListener('click', clearSelection);
+$('resetPosBtn').addEventListener('click', () => {
+  state.margins = {left:80,right:80,top:120,bottom:120};
+  syncMarginInputs();
+  applyChartBox();
+});
+$('resetBtn').addEventListener('click', () => location.reload());
+$('exportBtn').addEventListener('click', exportPNG);
+
+$('playAnimBtn').addEventListener('click', () => playAnimation());
+$('pauseAnimBtn').addEventListener('click', () => pauseAnimation());
+$('restartAnimBtn').addEventListener('click', () => restartAnimation(true));
+
+$('chartBox').addEventListener('mousedown', chartPointerDown);
+window.addEventListener('mousemove', chartPointerMove);
+window.addEventListener('mouseup', chartPointerUp);
+window.addEventListener('mouseleave', chartPointerUp);
+
+new ResizeObserver(() => applyChartBox()).observe($('stage'));
+window.addEventListener('resize', applyChartBox);
+
+initAccordionPanels();
+syncMarginInputs();
+sheetMatrix = textToMatrix($('dataInput').value);
+renderSheet();
+updateXCustomVisibility();
+updateLegendControlVisibility();
+updateAnimationButtons();
+setFormat('1080x1350');
+restartAnimation(false);
+</script>
+</body>
+</html>
