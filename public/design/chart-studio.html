@@ -39,7 +39,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 .app{height:100vh;display:grid;grid-template-rows:66px 1fr;background:var(--bg)}
 
-/* Embedded only inside FORMA DESIGN 0.9.7.5.23 */
+/* Embedded only inside FORMA DESIGN 0.9.7.5.24 */
 body{background:#d8d6d1}
 .app{height:100vh;grid-template-rows:1fr}
 .topbar{display:none!important}
@@ -86,6 +86,13 @@ body{background:#d8d6d1}
   border-radius:10px;padding:0 12px;font-size:12px;font-weight:650;outline:none;min-width:205px;
 }
 .export-select:focus{border-color:#bbb5ff;box-shadow:0 0 0 3px rgba(91,108,255,.14)}
+.export-format-backdrop{position:fixed;inset:0;background:rgba(25,25,28,.42);display:grid;place-items:center;z-index:80;padding:20px}
+.export-format-dialog{width:min(520px,100%);background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:0 30px 90px rgba(0,0,0,.24)}
+.export-format-dialog h3{margin:0;font-size:16px}.export-format-dialog p{margin:5px 0 14px;color:var(--muted);font-size:10px;line-height:1.45}
+.export-format-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.export-format-option{border:1px solid var(--line);background:#faf9f6;border-radius:11px;padding:11px;text-align:left;color:var(--text)}
+.export-format-option:hover{border-color:var(--accent);background:var(--accent-soft)}.export-format-option strong{display:block;font-size:11px}.export-format-option span{display:block;margin-top:3px;color:var(--muted);font-size:9px}
+.export-format-actions{display:flex;justify-content:flex-end;margin-top:12px}
+
 .btn.ghost{background:transparent;box-shadow:none}
 
 /* Main editor shell */
@@ -342,7 +349,7 @@ body.embed-mode .app{min-height:100vh}
       <div class="brand-copy">
         <div class="brand-line">
           <strong>FORMA DESIGN</strong>
-          <span class="version-badge">CHART STUDIO · v17.8</span>
+          <span class="version-badge">CHART STUDIO · v17.9</span>
         </div>
         <span class="brand-subtitle">Editor visual de gráficos</span>
       </div>
@@ -350,16 +357,7 @@ body.embed-mode .app{min-height:100vh}
     <div class="actions">
       <button class="btn ghost" id="resetPosBtn">Reenquadrar</button>
       <button class="btn" id="resetBtn">Restaurar exemplo</button>
-      <select id="exportFormat" class="export-select" aria-label="Formato de exportação">
-        <option value="png">PNG</option>
-        <option value="png-transparent" selected>PNG com transparência</option>
-        <option value="h264">H264</option>
-        <option value="webm">WEBM</option>
-        <option value="webm-transparent">WEBM com transparência</option>
-        <option value="webp">WEBP</option>
-        <option value="svg">SVG</option>
-      </select>
-      <button class="btn primary" id="exportBtn">Exportar</button>
+      <button class="btn primary" id="exportBtn">Baixar</button>
       <button class="btn" id="insertFormaBtn" style="display:none">Inserir na prancheta</button>
     </div>
   </header>
@@ -641,7 +639,7 @@ Colômbia,27</textarea>
       <div class="section">
         <div class="section-head"><strong>Animação</strong><span class="hint">formação do gráfico</span></div>
         <div class="switchline"><label>Habilitar animação</label><label class="switch"><input id="enableAnimation" type="checkbox"><span class="slider"></span></label></div>
-        <div class="field"><label>Velocidade</label><input id="animSpeed" type="range" min="0.25" max="4" step="0.25" value="1"></div>
+        <div class="field"><label>Velocidade</label><input id="animSpeed" type="range" min="0.05" max="4" step="0.05" value="1"></div>
         <div class="small" id="animSpeedLabel">1.00×</div>
         <div class="row">
           <div class="field" style="margin-bottom:0"><button class="btn" id="playAnimBtn" style="width:100%">Play</button></div>
@@ -663,6 +661,23 @@ Colômbia,27</textarea>
       </div>
     </aside>
   </main>
+  <div class="export-format-backdrop hidden" id="exportFormatModal" role="dialog" aria-modal="true" aria-labelledby="exportFormatTitle">
+    <div class="export-format-dialog">
+      <h3 id="exportFormatTitle">Escolha o formato</h3>
+      <p>O arquivo será gerado com o tamanho e a animação atuais do gráfico.</p>
+      <div class="export-format-grid">
+        <button class="export-format-option" type="button" data-export-format="png"><strong>PNG</strong><span>Imagem com fundo branco</span></button>
+        <button class="export-format-option" type="button" data-export-format="png-transparent"><strong>PNG transparente</strong><span>Imagem com canal alpha</span></button>
+        <button class="export-format-option" type="button" data-export-format="h264"><strong>H264</strong><span>Vídeo MP4 quando suportado pelo navegador</span></button>
+        <button class="export-format-option" type="button" data-export-format="webm"><strong>WEBM</strong><span>Vídeo com fundo branco</span></button>
+        <button class="export-format-option" type="button" data-export-format="webm-transparent"><strong>WEBM transparente</strong><span>Vídeo com canal alpha quando suportado</span></button>
+        <button class="export-format-option" type="button" data-export-format="webp"><strong>WEBP</strong><span>Imagem compacta</span></button>
+        <button class="export-format-option" type="button" data-export-format="svg"><strong>SVG</strong><span>Arquivo SVG mantendo a área transparente</span></button>
+      </div>
+      <div class="export-format-actions"><button class="btn" id="closeExportFormatModal" type="button">Cancelar</button></div>
+    </div>
+  </div>
+
 </div>
 
 <script>
@@ -1831,7 +1846,7 @@ function drawEmptyState(message, submessage=''){
 }
 
 function getAnimationSpeed(){
-  return Math.max(0.25, +($('animSpeed')?.value || 1));
+  return Math.max(0.05, +($('animSpeed')?.value || 1));
 }
 
 function updateAnimationSpeedLabel(){
@@ -3457,8 +3472,8 @@ async function exportVideo({transparent, extension, mimeCandidates}){
   downloadBlob(new Blob(chunks, {type: mimeType}), getChartExportBaseName() + '.' + extension);
 }
 
-async function exportSelectedFormat(){
-  const format = $('exportFormat')?.value || 'png-transparent';
+async function exportSelectedFormat(formatOverride){
+  const format = formatOverride || 'png-transparent';
   if(format === 'png') return exportRasterImage({mimeType:'image/png', extension:'png', transparent:false});
   if(format === 'png-transparent') return exportRasterImage({mimeType:'image/png', extension:'png', transparent:true});
   if(format === 'webp') return exportRasterImage({mimeType:'image/webp', extension:'webp', transparent:true, quality:0.96});
@@ -3612,9 +3627,17 @@ $('resetPosBtn').addEventListener('click', () => {
   applyChartBox();
 });
 $('resetBtn').addEventListener('click', () => location.reload());
-$('exportBtn').addEventListener('click', () => {
-  exportSelectedFormat().catch(error => alert(error?.message || 'Falha ao exportar o gráfico.'));
-});
+function closeExportFormatModal(){ $('exportFormatModal')?.classList.add('hidden'); }
+function openExportFormatModal(){ $('exportFormatModal')?.classList.remove('hidden'); }
+$('exportBtn').addEventListener('click', openExportFormatModal);
+$('closeExportFormatModal').addEventListener('click', closeExportFormatModal);
+$('exportFormatModal').addEventListener('click', event => { if(event.target === $('exportFormatModal')) closeExportFormatModal(); });
+document.querySelectorAll('[data-export-format]').forEach(button => button.addEventListener('click', async () => {
+  const format = button.dataset.exportFormat;
+  closeExportFormatModal();
+  try{ await exportSelectedFormat(format); }
+  catch(error){ alert(error?.message || 'Falha ao exportar o gráfico.'); }
+}));
 $('insertFormaBtn').addEventListener('click', insertIntoForma);
 
 $('playAnimBtn').addEventListener('click', () => playAnimation());
