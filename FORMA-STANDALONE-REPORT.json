@@ -1,6 +1,6 @@
 {
   "product": "FORMA DESIGN",
-  "version": "0.9.7.5.9",
+  "version": "0.9.7.5.10",
   "ronda_one_in_project": false,
   "projects_page_or_tab": false,
   "save_project_function": true,
@@ -81,5 +81,14 @@
       "mask": "borderColor",
       "nothing_selected": "artboard background"
     }
+  },
+  "object_deletion": {
+    "properties_delete_button": true,
+    "delete_key": true,
+    "backspace_key": true,
+    "layer_row_delete_button": true,
+    "context_menu_delete": true,
+    "multi_selection": true,
+    "typing_guard": true
   }
 }

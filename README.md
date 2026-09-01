@@ -1,4 +1,4 @@
-# FORMA DESIGN 0.9.7.5.9
+# FORMA DESIGN 0.9.7.5.10
 
 Projeto independente do editor FORMA DESIGN.
 
@@ -60,3 +60,13 @@ A ferramenta **Gráficos** aparece diretamente na barra lateral esquerda do FORM
   - forma → preenchimento sólido;
   - máscara → cor da borda;
   - sem seleção → fundo da prancheta.
+
+## Exclusão de objetos — v0.9.7.5.10
+
+A exclusão foi reforçada por quatro caminhos:
+- botão **Excluir** no painel Propriedades;
+- tecla **Delete**;
+- tecla **Backspace**, quando o foco não está em edição de texto/campo;
+- botão **×** em cada camada e item **Excluir camada** no menu de contexto.
+
+A exclusão múltipla também é suportada. Campos de texto, inputs e edição inline ignoram Backspace/Delete para evitar apagar objetos enquanto o usuário digita.
