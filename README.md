@@ -1,4 +1,4 @@
-# FORMA DESIGN 0.9.7.5.16
+# FORMA DESIGN 0.9.7.5.17
 
 Projeto independente do editor FORMA DESIGN.
 
@@ -97,7 +97,7 @@ A exclusão múltipla também é suportada. Campos de texto, inputs e edição i
 - O elemento pode ser selecionado novamente e reaberto no Chart Studio para nova edição.
 
 
-## Remove BG — v0.9.7.5.16
+## Remove BG — v0.9.7.5.17
 
 - Corrigido para imagens locais, externas, GIPHY e assets via proxy.
 - Tenta primeiro `/api/remove-bg` no Worker.
@@ -107,12 +107,12 @@ A exclusão múltipla também é suportada. Campos de texto, inputs e edição i
 - Mensagens de erro preservam o motivo retornado pela API.
 
 
-## Deploy verification — v0.9.7.5.16
+## Deploy verification — v0.9.7.5.17
 
 After `npm install` and `npm run deploy`, verify:
 
-- `/api/health` returns `version: 0.9.7.5.16`.
-- `/design/` shows `0.9.7.5.16` in the top bar.
-- responses under `/design/` include `X-Forma-Version: 0.9.7.5.16` and `Cache-Control: no-store`.
+- `/api/health` returns `version: 0.9.7.5.17`.
+- `/design/` shows `0.9.7.5.17` in the top bar.
+- responses under `/design/` include `X-Forma-Version: 0.9.7.5.17` and `Cache-Control: no-store`.
 - Chart Studio PNG export keeps transparent pixels outside the chart.
 - Forma > Shapes > Line is stroke-only, with no fill controls and 0.25px increments.

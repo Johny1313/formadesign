@@ -1,0 +1,13 @@
+import { handleSecureRemoveBg } from '../src/forma/remove-bg.js';
+const originalFetch=globalThis.fetch;
+const mkReq=()=>{const form=new FormData();form.append('image_file',new Blob([new Uint8Array([137,80,78,71,13,10,26,10])],{type:'image/png'}),'x.png');return new Request('https://forma.local/api/remove-bg',{method:'POST',body:form});};
+let calls=[];
+globalThis.fetch=async (_url,opts={})=>{const key=opts.headers?.['X-Api-Key']||'';calls.push(key);if(key==='ENV_BAD')return Response.json({errors:[{title:'Authentication failed'}]},{status:403});return new Response(new Uint8Array([137,80,78,71,13,10,26,10]),{status:200,headers:{'Content-Type':'image/png'}});};
+let r=await handleSecureRemoveBg(mkReq(),{REMOVEBG_API_KEY:'ENV_BAD'});
+if(r.status!==200||calls.length!==2)throw new Error(`expected environment->fallback recovery, status=${r.status}, calls=${calls.length}`);
+if(r.headers.get('X-Forma-Remove-Bg-Key')!=='fallback')throw new Error('expected fallback success header');
+calls=[];
+r=await handleSecureRemoveBg(mkReq(),{});
+if(r.status!==200||calls.length!==1)throw new Error('expected bundled fallback success');
+console.log('REMOVE_BG_BACKEND_SCENARIOS: PASS');
+globalThis.fetch=originalFetch;

@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FORMA DESIGN 0.9.7.5.16</title>
+  <title>FORMA DESIGN 0.9.7.5.17</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=Lato:wght@300;400;700;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Nunito:wght@300;400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@
       <div class="brand-wrap">
         <div class="brand-mark">F</div>
         <div>
-          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.16</b></div>
+          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.17</b></div>
           <div class="brand-sub">Editor visual de design, conteúdo e gráficos</div>
         </div>
       </div>
@@ -1671,6 +1671,8 @@
   async function runUpscaleForElement(el,factor,button,statusSelector){const status=$(statusSelector);if(!el?.src){showToast('Selecione uma imagem primeiro');return;}if(/^data:image\/gif/i.test(el.src)||/\.gif(?:\?|$)/i.test(el.src)){showToast('Upscale de GIF animado não é aplicado para preservar a animação');return;}const old=button.textContent;button.classList.add('busy');button.disabled=true;button.textContent='Processando…';if(status)status.textContent='Criando versão em alta resolução…';try{const result=await upscaleSource(el.src,factor);el.src=result.data;el.sourceWidth=result.w;el.sourceHeight=result.h;if(el.type==='mask')el.imageAspect=result.w/result.h;state.uploads.unshift({name:`upscale-${result.w}x${result.h}.png`,src:result.data});pushHistory();renderAll();if(status)status.textContent=`Upscale concluído: ${result.w} × ${result.h} px`;showToast(`Upscale concluído · ${result.w}×${result.h}`);}catch(err){if(status)status.textContent=err.message||'Falha no upscale';showToast(`Upscale: ${err.message||'falha ao processar'}`,3200);}finally{button.classList.remove('busy');button.disabled=false;button.textContent=old;}}
   $('#upscaleImageBtn').addEventListener('click',()=>{const e=selected();if(e?.type==='image')runUpscaleForElement(e,$('#upscaleFactor').value,$('#upscaleImageBtn'),'#upscaleImageStatus');});
   $('#upscaleMaskBtn').addEventListener('click',()=>{const e=selected();if(e?.type==='mask')runUpscaleForElement(e,$('#upscaleMaskFactor').value,$('#upscaleMaskBtn'),'#upscaleMaskStatus');});
+  $('#removeBgBtn').addEventListener('click',()=>{const e=selected();if(e?.type!=='image'){showToast('Selecione uma imagem para remover o fundo');return;}removeBgForElement(e,$('#removeBgBtn'));});
+  $('#removeBgMaskBtn').addEventListener('click',()=>{const e=selected();if(e?.type!=='mask'){showToast('Selecione uma máscara com foto para remover o fundo');return;}if(!e.src&&!e.originalSrc){showToast('Insira uma imagem na máscara primeiro');return;}removeBgForElement(e,$('#removeBgMaskBtn'));});
 
   const FORMA_GIPHY_BROWSER_KEY='CIpNE3NWFRaDgMNSdQqIAMRd85vkBNFp';
 
@@ -2049,7 +2051,7 @@
     return {
       contractVersion:'ronda-one-production-v2',
       source:'forma-direct-article',
-      sourceVersion:'0.9.7.5.16',
+      sourceVersion:'0.9.7.5.17',
       title,
       editoria:data?.editoria||'Notícias',
       slides:(data?.slides||[]).map((slide,index)=>({...slide,number:Number(slide.number)||index+1})),
