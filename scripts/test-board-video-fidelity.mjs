@@ -8,7 +8,7 @@ const checks = [
   ['Layer order is rebuilt every frame', /for\(const e of \(board\?\.elements\|\|\[\]\)\)\{[\s\S]*drawPreparedBoardElement\(ctx,e,assets\.get\(e\.id\),chartCanvas\)/],
   ['Chart video renderers are prepared per chart element', /async function createBoardChartVideoRenderers\(board\)/],
   ['Board export reads exact chart animation duration', /durationMs:Math\.max\(0,Number\(meta\?\.durationMs\)\|\|0\)/],
-  ['Board duration follows animated charts', /const durationMs=animatedDurations\.length\?Math\.max\(\.\.\.animatedDurations\):1000/],
+  ['Board duration follows animated media', /const mediaDurations=\[\.\.\.animatedDurations,\.\.\.\(assets\.gifDurations\|\|\[\]\)\][\s\S]*const durationMs=mediaDurations\.length\?Math\.max\(\.\.\.mediaDurations\):1000/],
   ['Chart progress follows elapsed export time', /clamp\(elapsedMs\/renderer\.durationMs,0,1\)/],
   ['Video is redrawn through requestAnimationFrame', /requestAnimationFrame\(tick\)/],
   ['Old static 900ms board recorder path is gone', !/boardVideoBlob[\s\S]{0,1800}setTimeout\(resolve,900\)/.test(editor)],
