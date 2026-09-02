@@ -43,7 +43,7 @@ async function create(request,env){
   const payload=normalizePayload(body.payload || body.project || body);
   await env.DB.prepare(`INSERT INTO ${TABLE}(id,source,title,payload,created_at,updated_at) VALUES(?,?,?,?,?,?)`)
     .bind(projectId,'forma-design',title,JSON.stringify(payload),now,now).run();
-  return json({ok:true,project:{id:projectId,title,payload,createdAt:now,updatedAt:now}});
+  return json({ok:true,id:projectId,project:{id:projectId,title,payload,createdAt:now,updatedAt:now}});
 }
 
 async function list(env){
@@ -75,7 +75,16 @@ async function save(projectId,request,env){
   const now=new Date().toISOString();
   await env.DB.prepare(`UPDATE ${TABLE} SET title=?,payload=?,updated_at=? WHERE id=?`)
     .bind(title,JSON.stringify(payload),now,projectId).run();
-  return json({ok:true,project:{id:projectId,title,payload,createdAt:current.created_at,updatedAt:now}});
+  return json({ok:true,id:projectId,project:{id:projectId,title,payload,createdAt:current.created_at,updatedAt:now}});
+}
+
+
+async function remove(projectId,env){
+  await ensure(env.DB);
+  const current=await env.DB.prepare(`SELECT id FROM ${TABLE} WHERE id=?`).bind(projectId).first();
+  if(!current) return json({ok:false,error:'Projeto não encontrado'},404);
+  await env.DB.prepare(`DELETE FROM ${TABLE} WHERE id=?`).bind(projectId).run();
+  return json({ok:true,id:projectId});
 }
 
 export async function handleProjectsApi(request,env){
@@ -86,5 +95,6 @@ export async function handleProjectsApi(request,env){
   const m=/^\/api\/projects\/([a-f0-9-]{20,80})$/i.exec(url.pathname);
   if(m && request.method==='GET') return get(m[1],env);
   if(m && (request.method==='PUT'||request.method==='POST')) return save(m[1],request,env);
+  if(m && request.method==='DELETE') return remove(m[1],env);
   return json({ok:false,error:'Endpoint não encontrado'},404);
 }
