@@ -39,7 +39,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 .app{height:100vh;display:grid;grid-template-rows:66px 1fr;background:var(--bg)}
 
-/* Embedded only inside FORMA DESIGN 0.9.7.5.30 */
+/* Embedded only inside FORMA DESIGN 0.9.7.5.31 */
 body{background:#d8d6d1}
 .app{height:100vh;grid-template-rows:1fr}
 .topbar{display:none!important}
@@ -3560,8 +3560,17 @@ async function exportVideo({transparent, extension, mimeCandidates}){
     : 'WEBM não é suportado neste navegador para exportação direta.');
 
   const snapshot = preserveAnimationSnapshot();
+  const animationRequested = !!$('enableAnimation')?.checked;
+  const duration = animationRequested ? getAnimationDuration() : 1000;
   cancelAnimationLoop();
   state.animationPlaying = false;
+
+  // Exportação de vídeo sempre começa do frame 0 quando a animação está habilitada.
+  // Isso evita gravar somente o estado final caso o preview já tenha terminado.
+  state.animationEnabled = animationRequested;
+  state.animationProgress = animationRequested ? 0 : 1;
+  state.animationStartTs = 0;
+  draw();
 
   const seedBuilt = buildExportCanvas();
   const recorderCanvas = document.createElement('canvas');
@@ -3576,12 +3585,9 @@ async function exportVideo({transparent, extension, mimeCandidates}){
     if(event.data && event.data.size) chunks.push(event.data);
   };
 
-  const shouldRenderAnimation = shouldAnimate();
-  const duration = shouldRenderAnimation ? getAnimationDuration() : 1000;
-
   const drawFrame = (progress) => {
-    state.animationEnabled = shouldRenderAnimation;
-    state.animationProgress = shouldRenderAnimation ? clamp(progress, 0, 1) : 1;
+    state.animationEnabled = animationRequested;
+    state.animationProgress = animationRequested ? clamp(progress, 0, 1) : 1;
     draw();
     const built = buildExportCanvas();
     recorderCtx.clearRect(0, 0, recorderCanvas.width, recorderCanvas.height);
@@ -3592,20 +3598,25 @@ async function exportVideo({transparent, extension, mimeCandidates}){
     recorderCtx.drawImage(built.exportCanvas, 0, 0, recorderCanvas.width, recorderCanvas.height);
   };
 
-  recorder.start();
+  // Pré-carrega e segura o primeiro frame antes de iniciar a gravação.
+  drawFrame(animationRequested ? 0 : 1);
+  await wait(80);
+  recorder.start(250);
+  await wait(100);
+
   const start = performance.now();
   await new Promise(resolve => {
     function step(now){
       const elapsed = now - start;
-      const progress = duration <= 0 ? 1 : Math.min(1, elapsed / duration);
+      const progress = animationRequested ? Math.min(1, elapsed / duration) : 1;
       drawFrame(progress);
       if(progress >= 1){
-        wait(220).then(resolve);
+        // Mantém o último frame por alguns frames para o contêiner fechar corretamente.
+        wait(animationRequested ? 260 : 900).then(resolve);
         return;
       }
       requestAnimationFrame(step);
     }
-    drawFrame(0);
     requestAnimationFrame(step);
   });
 
@@ -3615,6 +3626,9 @@ async function exportVideo({transparent, extension, mimeCandidates}){
   });
 
   restoreAnimationSnapshot(snapshot);
+  if(animationRequested && !chunks.some(chunk => chunk.size > 0)){
+    throw new Error('A animação estava habilitada, mas o navegador não gerou frames de vídeo.');
+  }
   downloadBlob(new Blob(chunks, {type: mimeType}), getChartExportBaseName() + '.' + extension);
 }
 
