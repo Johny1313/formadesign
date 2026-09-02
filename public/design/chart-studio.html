@@ -39,7 +39,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 .app{height:100vh;display:grid;grid-template-rows:66px 1fr;background:var(--bg)}
 
-/* Embedded only inside FORMA DESIGN 0.9.7.5.29 */
+/* Embedded only inside FORMA DESIGN 0.9.7.5.30 */
 body{background:#d8d6d1}
 .app{height:100vh;grid-template-rows:1fr}
 .topbar{display:none!important}
@@ -81,6 +81,14 @@ body{background:#d8d6d1}
 .single-selection-tools{display:flex;flex-direction:column;gap:10px;margin-bottom:10px}
 .photo-preview-line{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .photo-preview-thumb{width:42px;height:42px;border-radius:12px;background:#f3f4f6 center/cover no-repeat;border:2px solid #d0d5dd;flex:0 0 auto}
+.race-photo-fields{margin-top:10px;padding-top:10px;border-top:1px solid var(--line)}
+.race-photo-fields-list{display:flex;flex-direction:column;gap:10px}
+.race-photo-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;padding:8px;border:1px solid var(--line);border-radius:12px;background:#fafafa}
+.race-photo-meta{display:flex;align-items:center;gap:8px;min-width:0}
+.race-photo-thumb{width:36px;height:36px;border-radius:10px;background:#eef1f5 center/cover no-repeat;border:2px solid #d0d5dd;flex:0 0 auto}
+.race-photo-name{font-size:12px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.race-photo-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.race-photo-actions input[type=file]{max-width:180px;font-size:11px}
 .export-select{
   min-height:34px;border:1px solid var(--line-strong);background:#fff;color:var(--text);
   border-radius:10px;padding:0 12px;font-size:12px;font-weight:650;outline:none;min-width:205px;
@@ -528,6 +536,10 @@ Colômbia,27</textarea>
           <div class="switchline"><label>Bar Chart Race · mostrar fotos</label><label class="switch"><input id="showBarRacePhotos" type="checkbox"><span class="slider"></span></label></div>
           <div class="switchline"><label>Line Chart Race · mostrar fotos</label><label class="switch"><input id="showLineRacePhotos" type="checkbox"><span class="slider"></span></label></div>
           <div class="note" style="margin-top:8px">Selecione uma categoria diretamente no gráfico para editar o nome e inserir uma foto.</div>
+          <div class="race-photo-fields hidden" id="racePhotoFieldsWrap">
+            <div class="section-head" style="margin:10px 0 8px"><strong>Campos de fotos</strong><span class="hint" id="racePhotoFieldsHint">suba uma foto para cada categoria</span></div>
+            <div class="race-photo-fields-list" id="racePhotoFieldsList"></div>
+          </div>
         </div>
       </div>
 
@@ -1200,10 +1212,106 @@ function updateTable(){
   draw();
 }
 
-function renderItemList(){
-  // O painel visual "Itens" foi removido na v11.
-  // A seleção continua sendo feita diretamente no gráfico.
+function getRaceMediaItems(){
+  if(chartType === 'barRace') return getBarRaceDataset().items.map(item => ({idx:item.idx, label:item.label, rawLabel:item.rawLabel, color:itemColor(item.colorKey ?? item.idx)}));
+  if(chartType === 'lineRace') return getLineRaceDataset().series.map(item => ({idx:item.idx, label:item.label, rawLabel:item.rawLabel, color:itemColor(item.idx)}));
+  return [];
+}
+
+function renderRacePhotoFields(){
+  const wrap = $('racePhotoFieldsWrap');
+  const list = $('racePhotoFieldsList');
+  const hint = $('racePhotoFieldsHint');
+  if(!wrap || !list || !hint) return;
+
+  const active = (chartType === 'barRace' && shouldShowBarRacePhotos()) || (chartType === 'lineRace' && shouldShowLineRacePhotos());
+  const items = active ? getRaceMediaItems() : [];
+  wrap.classList.toggle('hidden', !(active && items.length));
+  list.innerHTML = '';
+  if(!(active && items.length)){
+    updateSelectionEditor();
+    return;
+  }
+
+  hint.textContent = chartType === 'barRace'
+    ? 'suba uma foto para cada categoria do Bar Chart Race'
+    : 'suba uma foto para cada série do Line Chart Race';
+
+  items.forEach(item => {
+    const row = document.createElement('div');
+    row.className = 'race-photo-row';
+
+    const meta = document.createElement('div');
+    meta.className = 'race-photo-meta';
+
+    const thumb = document.createElement('div');
+    thumb.className = 'race-photo-thumb';
+    thumb.style.borderColor = item.color || '#d0d5dd';
+    const src = getItemImageSrc(item.idx);
+    if(src) thumb.style.backgroundImage = `url(${src})`;
+
+    const name = document.createElement('div');
+    name.className = 'race-photo-name';
+    name.textContent = item.label || item.rawLabel || `Item ${Number(item.idx) + 1}`;
+
+    meta.append(thumb, name);
+
+    const actions = document.createElement('div');
+    actions.className = 'race-photo-actions';
+
+    const upload = document.createElement('input');
+    upload.type = 'file';
+    upload.accept = 'image/*';
+    upload.setAttribute('aria-label', `Subir foto para ${name.textContent}`);
+    upload.addEventListener('change', event => {
+      handleItemPhotoUpload(item.idx, event.target.files?.[0], () => {
+        renderRacePhotoFields();
+        updateSelectionEditor();
+        draw();
+      });
+      event.target.value = '';
+    });
+    actions.appendChild(upload);
+
+    if(src){
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'btn';
+      remove.textContent = 'Remover';
+      remove.addEventListener('click', () => {
+        removeItemPhoto(item.idx);
+        renderRacePhotoFields();
+        updateSelectionEditor();
+        draw();
+      });
+      actions.appendChild(remove);
+    }
+
+    row.append(meta, actions);
+    list.appendChild(row);
+  });
+
   updateSelectionEditor();
+}
+
+function renderItemList(){
+  renderRacePhotoFields();
+}
+
+function handleItemPhotoUpload(idx, file, done){
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    state.itemImages[idx] = String(reader.result || '');
+    renderItemList();
+    if(typeof done === 'function') done();
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeItemPhoto(idx){
+  delete state.itemImages[idx];
+  renderItemList();
 }
 
 function getSelectableItemsMeta(){
@@ -3637,6 +3745,8 @@ $('csvFile').addEventListener('change', e => {
 
 $('applyAllBtn').addEventListener('click', applyColorToAll);
 $('applySelectedBtn').addEventListener('click', applyColorToSelected);
+$('showBarRacePhotos').addEventListener('change', () => { renderRacePhotoFields(); draw(); });
+$('showLineRacePhotos').addEventListener('change', () => { renderRacePhotoFields(); draw(); });
 $('clearSelectionBtn').addEventListener('click', clearSelection);
 $('selectedItemLabel').addEventListener('input', () => {
   if(state.selectedItems.size !== 1) return;
@@ -3650,20 +3760,17 @@ $('selectedItemPhotoUpload').addEventListener('change', event => {
   const file = event.target.files?.[0];
   if(!file) return;
   const idx = [...state.selectedItems][0];
-  const reader = new FileReader();
-  reader.onload = () => {
-    state.itemImages[idx] = String(reader.result || '');
-    renderItemList();
+  handleItemPhotoUpload(idx, file, () => {
+    updateSelectionEditor();
     draw();
-  };
-  reader.readAsDataURL(file);
+  });
   event.target.value = '';
 });
 $('removeSelectedPhotoBtn').addEventListener('click', () => {
   if(state.selectedItems.size !== 1) return;
   const idx = [...state.selectedItems][0];
-  delete state.itemImages[idx];
-  renderItemList();
+  removeItemPhoto(idx);
+  updateSelectionEditor();
   draw();
 });
 $('resetPosBtn').addEventListener('click', () => {
