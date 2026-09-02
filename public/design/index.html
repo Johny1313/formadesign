@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FORMA DESIGN 0.9.7.5.33</title>
+  <title>FORMA DESIGN 0.9.7.5.34</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=Lato:wght@300;400;700;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Nunito:wght@300;400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@
       <div class="brand-wrap">
         <div class="brand-mark">F</div>
         <div>
-          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.33</b></div>
+          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.34</b></div>
           <div class="brand-sub">Editor visual de design, conteúdo e gráficos</div>
         </div>
       </div>
@@ -2539,7 +2539,7 @@
     return {
       contractVersion:'ronda-one-production-v2',
       source:'forma-direct-article',
-      sourceVersion:'0.9.7.5.33',
+      sourceVersion:'0.9.7.5.34',
       title,
       editoria:data?.editoria||'Notícias',
       slides:(data?.slides||[]).map((slide,index)=>({...slide,number:Number(slide.number)||index+1})),
@@ -2734,10 +2734,51 @@
   function parseGifDurationMs(buffer){try{const bytes=new Uint8Array(buffer);let total=0,frames=0;for(let i=0;i<bytes.length-7;i++){if(bytes[i]===0x21&&bytes[i+1]===0xF9&&bytes[i+2]===0x04){let delay=bytes[i+4]|(bytes[i+5]<<8);if(delay<=1)delay=10;total+=delay*10;frames++;}}return frames>1?Math.max(100,total):0;}catch{return 0;}}
   async function gifDurationFromSource(src){try{const safe=proxyExternalAsset(String(src||''));const res=await fetch(safe,{cache:'no-store'});if(!res.ok)return 0;return parseGifDurationMs(await res.arrayBuffer());}catch{return 0;}}
   function freshGifSource(src){const safe=proxyExternalAsset(String(src||''));if(/^data:/i.test(safe))return safe;try{const u=new URL(safe,location.href);if(u.origin===location.origin){u.searchParams.set('_forma_gif_export',Date.now().toString(36)+Math.random().toString(36).slice(2,6));return u.href;}}catch{}return safe;}
-  async function prepareLiveGifAsset(e){
-    const source=e.src||e.originalSrc||'';const durationMs=await gifDurationFromSource(source);const img=new Image();img.decoding='sync';img.style.cssText='position:fixed;left:-28000px;top:0;width:2px;height:2px;opacity:.01;pointer-events:none;z-index:-9999;';document.body.appendChild(img);
+  async function fetchGifBlob(src){
+    const safe=proxyExternalAsset(String(src||''));
+    const res=await fetch(safe,{cache:'no-store'});
+    if(!res.ok)throw new Error(`GIF indisponível · HTTP ${res.status}`);
+    const blob=await res.blob();
+    if(!/image\/gif/i.test(blob.type||'')&&!isAnimatedGifElement({src}))throw new Error('A mídia não foi reconhecida como GIF.');
+    return blob;
+  }
+  async function decodeAnimatedGifAsset(e){
+    const source=e.src||e.originalSrc||'';
+    const blob=await fetchGifBlob(source);
+    const fallbackDuration=await gifDurationFromSource(source);
+    if(typeof ImageDecoder!=='undefined'&&ImageDecoder.isTypeSupported&&await ImageDecoder.isTypeSupported('image/gif')){
+      const decoder=new ImageDecoder({data:blob.stream(),type:'image/gif',preferAnimation:true});
+      await decoder.tracks.ready;
+      const track=decoder.tracks.selectedTrack;
+      const frameCount=Math.max(1,Number(track?.frameCount)||1);
+      const frames=[];let totalDurationMs=0;
+      try{
+        for(let frameIndex=0;frameIndex<frameCount;frameIndex++){
+          const decoded=await decoder.decode({frameIndex,completeFramesOnly:true});
+          const vf=decoded.image;
+          const bitmap=await createImageBitmap(vf);
+          const frameDurationMs=Math.max(10,Number(vf.duration||0)/1000||Math.round((fallbackDuration||3000)/frameCount));
+          frames.push({bitmap,durationMs:frameDurationMs,startMs:totalDurationMs});
+          totalDurationMs+=frameDurationMs;
+          try{vf.close();}catch{}
+        }
+      }finally{try{decoder.close();}catch{}}
+      if(frames.length>1){
+        return {kind:'gif-frames',frames,durationMs:Math.max(100,totalDurationMs),cleanup:()=>{for(const frame of frames){try{frame.bitmap.close();}catch{}}}};
+      }
+      for(const frame of frames){try{frame.bitmap.close();}catch{}}
+    }
+    const img=new Image();img.decoding='sync';img.style.cssText='position:fixed;left:0;top:0;width:4px;height:4px;opacity:.001;pointer-events:none;z-index:-9999;';document.body.appendChild(img);
     await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Tempo esgotado ao preparar GIF animado.')),12000);img.onload=()=>{clearTimeout(timer);resolve();};img.onerror=()=>{clearTimeout(timer);reject(new Error('GIF indisponível.'));};img.src=freshGifSource(source);});
-    return {img,durationMs:durationMs||3000,cleanup:()=>img.remove()};
+    return {kind:'gif-live',img,durationMs:fallbackDuration||3000,cleanup:()=>img.remove()};
+  }
+  function gifFrameForElapsed(asset,elapsedMs){
+    if(!asset)return null;
+    if(asset.kind==='gif-live')return asset.img;
+    if(asset.kind!=='gif-frames'||!asset.frames?.length)return asset;
+    const duration=Math.max(1,asset.durationMs||1),local=((Number(elapsedMs)||0)%duration+duration)%duration;
+    for(let i=asset.frames.length-1;i>=0;i--){if(local>=asset.frames[i].startMs)return asset.frames[i].bitmap;}
+    return asset.frames[0].bitmap;
   }
   async function renderBoardCanvas(board,options={}){
     const safeBoard=board||currentBoardData();
@@ -2774,21 +2815,22 @@
   async function prepareBoardAnimatedGifAssets(board,assets){
     for(const e of (board?.elements||[])){
       if(!e?.visible||!(e.type==='image'||e.type==='mask')||!e.src||!isAnimatedGifElement(e))continue;
-      try{const live=await prepareLiveGifAsset(e);assets.set(e.id,live.img);assets.gifDurations.push(live.durationMs);assets.gifCleanups.push(live.cleanup);}catch{try{assets.set(e.id,await loadImage(e.src));}catch{}}
+      try{const gif=await decodeAnimatedGifAsset(e);assets.set(e.id,gif);assets.gifDurations.push(gif.durationMs);assets.gifCleanups.push(gif.cleanup);}catch(err){console.warn('FORMA GIF export fallback:',err);try{assets.set(e.id,await loadImage(e.src));}catch{}}
     }
     return assets;
   }
   function cleanupBoardVideoAssets(assets){for(const cleanup of (assets?.gifCleanups||[])){try{cleanup();}catch{}}if(assets?.gifCleanups)assets.gifCleanups.length=0;}
-  function drawPreparedBoardElement(ctx,e,asset,chartCanvas){
+  function drawPreparedBoardElement(ctx,e,asset,chartCanvas,elapsedMs=0){
     if(!e?.visible)return;
+    const drawableAsset=isAnimatedGifElement(e)?gifFrameForElapsed(asset,elapsedMs):asset;
     ctx.save();ctx.globalAlpha=(e.opacity??100)/100;const cx=e.x+e.w/2,cy=e.y+e.h/2;ctx.translate(cx,cy);ctx.rotate((e.rotation||0)*Math.PI/180);ctx.translate(-e.w/2,-e.h/2);
     if(e.type==='text'){if(asset)ctx.drawImage(asset,0,0);else drawRichTextElementCanvas(ctx,e);}
     else if(e.type==='image'){
       if(isChartElement(e)&&chartCanvas)ctx.drawImage(chartCanvas,0,0,e.w,e.h);
-      else if(asset){if(isChartElement(e))ctx.drawImage(asset,0,0,e.w,e.h);else drawImageFit(ctx,asset,e.w,e.h,e.objectFit||'cover');}
+      else if(drawableAsset){if(isChartElement(e))ctx.drawImage(drawableAsset,0,0,e.w,e.h);else drawImageFit(ctx,drawableAsset,e.w,e.h,e.objectFit||'cover');}
     }
     else if(e.type==='mask'){
-      maskPath(ctx,e);ctx.clip();if(asset)drawMaskedImage(ctx,asset,e);else{ctx.fillStyle='#ddd';ctx.fillRect(0,0,e.w,e.h);}
+      maskPath(ctx,e);ctx.clip();if(drawableAsset)drawMaskedImage(ctx,drawableAsset,e);else{ctx.fillStyle='#ddd';ctx.fillRect(0,0,e.w,e.h);}
       if(e.borderWidth){ctx.restore();ctx.save();ctx.globalAlpha=(e.opacity??100)/100;ctx.translate(cx,cy);ctx.rotate((e.rotation||0)*Math.PI/180);ctx.translate(-e.w/2,-e.h/2);ctx.strokeStyle=e.borderColor||'#fff';ctx.lineWidth=e.borderWidth*2;maskPath(ctx,e);ctx.stroke();}
     }
     else{ensureShapePaint(e);const dash=e.strokeStyle==='dashed'?[Math.max(.5,(Number(e.strokeWidth)||1)*.7),Math.max(3,(Number(e.strokeWidth)||1)*2.5)]:[];if(e.type==='line'){ctx.strokeStyle=e.strokeColor||'#151515';ctx.lineWidth=Math.max(.25,Number(e.strokeWidth)||2);ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash(dash);shapePath(ctx,e);ctx.stroke();}else{if(e.fillEnabled!==false){ctx.fillStyle=e.fillMode==='gradient'?canvasGradient(ctx,e.w,e.h,e.fillGradient):e.fill;shapePath(ctx,e);ctx.fill();}if(e.strokeWidth>0){ctx.strokeStyle=e.strokeColor||'#000';ctx.lineWidth=e.strokeWidth;ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash(dash);shapePath(ctx,e);ctx.stroke();}}
@@ -2816,7 +2858,7 @@
         const renderer=chartRenderers.get(e.id);
         if(renderer){const progress=renderer.animated&&renderer.durationMs>0?clamp(elapsedMs/renderer.durationMs,0,1):1;chartCanvas=renderer.win.__formaRenderPreparedChartFrame(progress);}
       }
-      drawPreparedBoardElement(ctx,e,assets.get(e.id),chartCanvas);
+      drawPreparedBoardElement(ctx,e,assets.get(e.id),chartCanvas,elapsedMs);
     }
   }
   async function boardVideoBlob(board,{transparent=false,h264=false}={}){

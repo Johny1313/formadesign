@@ -10,7 +10,7 @@ const checks = [
   ['Prepared video draws text bitmap once', /if\(e\.type==='text'\)\{if\(asset\)ctx\.drawImage\(asset,0,0\)/],
   ['Animated GIF detection exists', /function isAnimatedGifElement\(e\)/],
   ['GIF duration parser exists', /function parseGifDurationMs\(buffer\)/],
-  ['Live GIF asset remains attached to DOM', /async function prepareLiveGifAsset\(e\)[\s\S]*document\.body\.appendChild\(img\)/],
+  ['GIF decoder uses explicit frame timeline', /async function decodeAnimatedGifAsset\(e\)[\s\S]*new ImageDecoder\(/],
   ['GIF assets are prepared after chart renderers', /createBoardChartVideoRenderers\(board\);await prepareBoardAnimatedGifAssets\(board,assets\)/],
   ['GIF loop duration affects board video duration', /const mediaDurations=\[\.\.\.animatedDurations,\.\.\.\(assets\.gifDurations\|\|\[\]\)\]/],
   ['GIF assets are cleaned after recording', /cleanupBoardVideoAssets\(assets\)/],
