@@ -12,7 +12,7 @@ const checks = [
   ['GIF duration parser exists', /function parseGifDurationMs\(buffer\)/],
   ['GIF decoder uses explicit frame timeline', /async function decodeAnimatedGifAsset\(e\)[\s\S]*new ImageDecoder\(/],
   ['GIF assets are prepared after chart renderers', /createBoardChartVideoRenderers\(board\);await prepareBoardAnimatedGifAssets\(board,assets\)/],
-  ['GIF loop duration affects board video duration', /const mediaDurations=\[\.\.\.animatedDurations,\.\.\.\(assets\.gifDurations\|\|\[\]\)\]/],
+  ['GIF durations remain available as fallback when there is no animated chart', /const gifDurations=\[\.\.\.\(assets\.gifDurations\|\|\[\]\)\]\.filter\(v=>v>0\);const durationMs=animatedDurations\.length\?Math\.max\(\.\.\.animatedDurations\):\(gifDurations\.length\?Math\.max\(\.\.\.gifDurations\):1000\);/],
   ['GIF assets are cleaned after recording', /cleanupBoardVideoAssets\(assets\)/],
   ['Per-frame compositor still clears canvas', /ctx\.clearRect\(0,0,ctx\.canvas\.width,ctx\.canvas\.height\)/],
   ['Chart animation progress remains time based', /clamp\(elapsedMs\/renderer\.durationMs,0,1\)/]
