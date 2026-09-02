@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FORMA DESIGN 0.9.7.5.31</title>
+  <title>FORMA DESIGN 0.9.7.5.32</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=Lato:wght@300;400;700;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Nunito:wght@300;400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@
       <div class="brand-wrap">
         <div class="brand-mark">F</div>
         <div>
-          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.31</b></div>
+          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.32</b></div>
           <div class="brand-sub">Editor visual de design, conteúdo e gráficos</div>
         </div>
       </div>
@@ -2539,7 +2539,7 @@
     return {
       contractVersion:'ronda-one-production-v2',
       source:'forma-direct-article',
-      sourceVersion:'0.9.7.5.31',
+      sourceVersion:'0.9.7.5.32',
       title,
       editoria:data?.editoria||'Notícias',
       slides:(data?.slides||[]).map((slide,index)=>({...slide,number:Number(slide.number)||index+1})),
@@ -2670,7 +2670,12 @@
     const box=document.createElement('div');box.innerHTML=sanitizeRichTextHtml(e.richTextHtml);const out=[];
     const push=(text,style)=>{if(!text)return;const value=e.uppercase?String(text).toLocaleUpperCase('pt-BR'):String(text),prev=out.at(-1);if(prev&&prev.fontFamily===style.fontFamily&&prev.fontWeight===style.fontWeight&&prev.textColor===style.textColor)prev.text+=value;else out.push({text:value,...style});};
     const walk=(node,style)=>{if(node.nodeType===Node.TEXT_NODE){push(node.nodeValue||'',style);return;}if(node.nodeType!==Node.ELEMENT_NODE)return;const tag=node.tagName.toLowerCase();if(tag==='br'){push('\n',style);return;}let next={...style};if(tag==='span'){if(node.style.fontFamily)next.fontFamily=safeRichFamily(node.style.fontFamily.replace(/^['"]|['"]$/g,''));if(node.style.fontWeight)next.fontWeight=safeRichWeight(node.style.fontWeight);const c=safeRichColor(node.style.color||'');if(c)next.textColor=c;}[...node.childNodes].forEach(child=>walk(child,next));if(tag==='div'||tag==='p')push('\n',next);};
-    [...box.childNodes].forEach(node=>walk(node,base));return out.length?out:[{text:e.text||'',...base}];
+    [...box.childNodes].forEach(node=>walk(node,base));
+    const compact=value=>String(value||'').replace(/\s+/g,' ').trim();
+    const expected=compact(e.text||'');
+    const actual=compact(out.map(run=>run.text||'').join(''));
+    if(expected && actual && expected!==actual)return[{text:e.uppercase?String(e.text||'').toLocaleUpperCase('pt-BR'):String(e.text||''),...base}];
+    return out.length?out:[{text:e.text||'',...base}];
   }
   function setRichCanvasStyle(ctx,e,run){ctx.font=`${run.fontWeight||e.fontWeight||400} ${e.fontSize||32}px ${familyCss(run.fontFamily||e.fontFamily)}, Arial, sans-serif`;ctx.fillStyle=run.textColor||e.textColor||'#111';if('letterSpacing' in ctx)ctx.letterSpacing=(e.letterSpacing||0)+'px';ctx.textBaseline='top';ctx.textAlign='left';}
   function layoutRichTextCanvas(ctx,e,maxW){
@@ -2704,7 +2709,73 @@
   function pickDesignVideoMime(candidates){if(!window.MediaRecorder)return'';for(const mime of candidates){if(!mime)continue;if(!MediaRecorder.isTypeSupported||MediaRecorder.isTypeSupported(mime))return mime;}return'';}
   async function canvasBlob(canvas,mime,quality){return await new Promise((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('Falha ao gerar o arquivo.')),mime,quality));}
   async function boardSvgBlob(board){const canvas=await renderBoardCanvas(board,{transparent:true});const data=canvas.toDataURL('image/png');const w=board.width||state.width,h=board.height||state.height;const svg=`<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><image href="${data}" width="${w}" height="${h}" preserveAspectRatio="none"/></svg>`;return new Blob([svg],{type:'image/svg+xml;charset=utf-8'});}
-  async function boardVideoBlob(board,{transparent=false,h264=false}={}){const mime=pickDesignVideoMime(h264?['video/mp4;codecs=h264','video/mp4;codecs=avc1.42E01E','video/mp4']:['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']);if(!mime)throw new Error(h264?'H264 não é suportado neste navegador para exportação direta.':'WEBM não é suportado neste navegador.');const source=await renderBoardCanvas(board,{transparent});const out=document.createElement('canvas');out.width=source.width;out.height=source.height;const c=out.getContext('2d');if(!transparent){c.fillStyle='#fff';c.fillRect(0,0,out.width,out.height);}c.drawImage(source,0,0);const stream=out.captureStream(30),chunks=[],rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:8_000_000});rec.ondataavailable=e=>{if(e.data?.size)chunks.push(e.data);};rec.start();await new Promise(resolve=>setTimeout(resolve,900));await new Promise(resolve=>{rec.onstop=resolve;rec.stop();});return {blob:new Blob(chunks,{type:mime}),extension:h264?'mp4':'webm'};}
+  async function preloadBoardVideoAssets(board){
+    const assets=new Map();
+    for(const e of (board?.elements||[])){
+      if(!e?.visible)continue;
+      if(isChartElement(e)&&e.chartConfig)continue;
+      if((e.type==='image'||e.type==='mask')&&e.src){
+        try{assets.set(e.id,await loadImage(e.src));}catch{}
+      }
+    }
+    return assets;
+  }
+  function drawPreparedBoardElement(ctx,e,asset,chartCanvas){
+    if(!e?.visible)return;
+    ctx.save();ctx.globalAlpha=(e.opacity??100)/100;const cx=e.x+e.w/2,cy=e.y+e.h/2;ctx.translate(cx,cy);ctx.rotate((e.rotation||0)*Math.PI/180);ctx.translate(-e.w/2,-e.h/2);
+    if(e.type==='text'){drawRichTextElementCanvas(ctx,e);}
+    else if(e.type==='image'){
+      if(isChartElement(e)&&chartCanvas)ctx.drawImage(chartCanvas,0,0,e.w,e.h);
+      else if(asset){if(isChartElement(e))ctx.drawImage(asset,0,0,e.w,e.h);else drawImageFit(ctx,asset,e.w,e.h,e.objectFit||'cover');}
+    }
+    else if(e.type==='mask'){
+      maskPath(ctx,e);ctx.clip();if(asset)drawMaskedImage(ctx,asset,e);else{ctx.fillStyle='#ddd';ctx.fillRect(0,0,e.w,e.h);}
+      if(e.borderWidth){ctx.restore();ctx.save();ctx.globalAlpha=(e.opacity??100)/100;ctx.translate(cx,cy);ctx.rotate((e.rotation||0)*Math.PI/180);ctx.translate(-e.w/2,-e.h/2);ctx.strokeStyle=e.borderColor||'#fff';ctx.lineWidth=e.borderWidth*2;maskPath(ctx,e);ctx.stroke();}
+    }
+    else{ensureShapePaint(e);const dash=e.strokeStyle==='dashed'?[Math.max(.5,(Number(e.strokeWidth)||1)*.7),Math.max(3,(Number(e.strokeWidth)||1)*2.5)]:[];if(e.type==='line'){ctx.strokeStyle=e.strokeColor||'#151515';ctx.lineWidth=Math.max(.25,Number(e.strokeWidth)||2);ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash(dash);shapePath(ctx,e);ctx.stroke();}else{if(e.fillEnabled!==false){ctx.fillStyle=e.fillMode==='gradient'?canvasGradient(ctx,e.w,e.h,e.fillGradient):e.fill;shapePath(ctx,e);ctx.fill();}if(e.strokeWidth>0){ctx.strokeStyle=e.strokeColor||'#000';ctx.lineWidth=e.strokeWidth;ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash(dash);shapePath(ctx,e);ctx.stroke();}}
+    }
+    ctx.restore();
+  }
+  async function createBoardChartVideoRenderers(board){
+    const renderers=new Map();
+    const charts=(board?.elements||[]).filter(e=>e?.visible&&isChartElement(e)&&e.chartConfig);
+    for(const e of charts){
+      const frame=document.createElement('iframe');frame.src='./chart-studio.html?embed=1&render=1&video=1';frame.tabIndex=-1;frame.setAttribute('aria-hidden','true');frame.style.cssText='position:fixed;left:-26000px;top:0;width:1800px;height:1200px;border:0;opacity:0;pointer-events:none;z-index:-1;';document.body.appendChild(frame);
+      await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(new Error('Tempo esgotado ao preparar a animação do gráfico.')),12000);frame.onload=()=>{clearTimeout(timer);resolve();};});
+      const win=frame.contentWindow;if(!win||typeof win.__formaPrepareChartVideo!=='function'){frame.remove();throw new Error('O renderizador de animação do gráfico não está disponível.');}
+      const meta=await win.__formaPrepareChartVideo({config:clone(e.chartConfig),formatW:Math.max(100,Math.round(e.w)),formatH:Math.max(100,Math.round(e.h))});
+      renderers.set(e.id,{frame,win,animated:!!meta?.animated,durationMs:Math.max(0,Number(meta?.durationMs)||0)});
+    }
+    return renderers;
+  }
+  function cleanupBoardChartVideoRenderers(renderers){for(const item of renderers.values()){try{item.frame?.remove();}catch{}}renderers.clear();}
+  function drawBoardVideoFrame(ctx,board,assets,chartRenderers,elapsedMs){
+    ctx.clearRect(0,0,ctx.canvas.width,ctx.canvas.height);if(!ctx.canvas.dataset.transparent)boardBackgroundPaint(ctx,board);
+    for(const e of (board?.elements||[])){
+      let chartCanvas=null;
+      if(isChartElement(e)){
+        const renderer=chartRenderers.get(e.id);
+        if(renderer){const progress=renderer.animated&&renderer.durationMs>0?clamp(elapsedMs/renderer.durationMs,0,1):1;chartCanvas=renderer.win.__formaRenderPreparedChartFrame(progress);}
+      }
+      drawPreparedBoardElement(ctx,e,assets.get(e.id),chartCanvas);
+    }
+  }
+  async function boardVideoBlob(board,{transparent=false,h264=false}={}){
+    const mime=pickDesignVideoMime(h264?['video/mp4;codecs=h264','video/mp4;codecs=avc1.42E01E','video/mp4']:['video/webm;codecs=vp9','video/webm;codecs=vp8','video/webm']);
+    if(!mime)throw new Error(h264?'H264 não é suportado neste navegador para exportação direta.':'WEBM não é suportado neste navegador.');
+    try{await document.fonts.ready;}catch{}
+    const out=document.createElement('canvas');out.width=board?.width||state.width;out.height=board?.height||state.height;const c=out.getContext('2d');if(transparent)out.dataset.transparent='1';
+    const assets=await preloadBoardVideoAssets(board);const chartRenderers=await createBoardChartVideoRenderers(board);
+    const animatedDurations=[...chartRenderers.values()].filter(item=>item.animated).map(item=>item.durationMs).filter(v=>v>0);const durationMs=animatedDurations.length?Math.max(...animatedDurations):1000;
+    const stream=out.captureStream(30),chunks=[],rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:10_000_000});rec.ondataavailable=e=>{if(e.data?.size)chunks.push(e.data);};
+    try{
+      drawBoardVideoFrame(c,board,assets,chartRenderers,0);rec.start(250);const started=performance.now();
+      await new Promise(resolve=>{const tick=now=>{const elapsed=Math.min(durationMs,Math.max(0,now-started));drawBoardVideoFrame(c,board,assets,chartRenderers,elapsed);if(elapsed>=durationMs){requestAnimationFrame(()=>{drawBoardVideoFrame(c,board,assets,chartRenderers,durationMs);resolve();});return;}requestAnimationFrame(tick);};requestAnimationFrame(tick);});
+      await new Promise(resolve=>setTimeout(resolve,40));await new Promise(resolve=>{rec.onstop=resolve;rec.stop();});
+    }finally{cleanupBoardChartVideoRenderers(chartRenderers);stream.getTracks().forEach(track=>track.stop());}
+    const blob=new Blob(chunks,{type:mime});if(blob.size<1024)throw new Error('O navegador não gerou frames suficientes para o vídeo.');return {blob,extension:h264?'mp4':'webm'};
+  }
+
   async function boardExportArtifact(board,format){if(format==='png')return {blob:await boardPngBlob(board),extension:'png'};if(format==='png-transparent')return {blob:await boardPngBlob(board,{transparent:true}),extension:'png'};if(format==='webp'){const canvas=await renderBoardCanvas(board,{transparent:true});return {blob:await canvasBlob(canvas,'image/webp',.96),extension:'webp'};}if(format==='svg')return {blob:await boardSvgBlob(board),extension:'svg'};if(format==='webm')return await boardVideoBlob(board,{transparent:false});if(format==='webm-transparent')return await boardVideoBlob(board,{transparent:true});if(format==='h264')return await boardVideoBlob(board,{transparent:false,h264:true});return {blob:await boardPngBlob(board),extension:'png'};}
   async function ensureFormaProjectReturnedToDesk(){
     const eventId=productionTaskId();if(!eventId)return null;

@@ -39,7 +39,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 .app{height:100vh;display:grid;grid-template-rows:66px 1fr;background:var(--bg)}
 
-/* Embedded only inside FORMA DESIGN 0.9.7.5.31 */
+/* Embedded only inside FORMA DESIGN 0.9.7.5.32 */
 body{background:#d8d6d1}
 .app{height:100vh;grid-template-rows:1fr}
 .topbar{display:none!important}
@@ -3663,6 +3663,46 @@ function renderResponsiveForForma(payload){
     if(window.parent && window.parent !== window) window.parent.postMessage({type:'forma-chart-render-result',payload:{requestId:payload.requestId,elementId:payload.elementId,pngDataUrl:built.exportCanvas.toDataURL('image/png'),width:built.width,height:built.height,formatW:state.formatW,formatH:state.formatH,config,historySync:payload.historySync!==false}}, '*');
   }));
 }
+
+async function preloadFormaChartMedia(){
+  const sources = Object.values(state.itemImages || {}).filter(Boolean);
+  if(!sources.length) return;
+  await Promise.all(sources.map(src => new Promise(resolve => {
+    const cached = itemImageCache.get(src);
+    if(cached?.complete && cached.naturalWidth){ resolve(); return; }
+    const img = cached || new Image();
+    const done = () => resolve();
+    img.onload = done;
+    img.onerror = done;
+    if(!cached){ itemImageCache.set(src, img); img.src = src; }
+  })));
+}
+
+window.__formaPrepareChartVideo = async function(payload={}){
+  if(payload.config) applyChartConfig(payload.config);
+  cancelAnimationLoop();
+  state.animationPlaying = false;
+  state.formatW = Math.max(100, +payload.formatW || state.formatW || 1080);
+  state.formatH = Math.max(100, +payload.formatH || state.formatH || 1080);
+  $('customWidth').value = state.formatW;
+  $('customHeight').value = state.formatH;
+  setFormat('custom');
+  await preloadFormaChartMedia();
+  await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+  cancelAnimationLoop();
+  state.animationPlaying = false;
+  state.animationProgress = shouldAnimate() ? 0 : 1;
+  draw();
+  return {animated:shouldAnimate(), durationMs:shouldAnimate()?getAnimationDuration():0, formatW:state.formatW, formatH:state.formatH};
+};
+
+window.__formaRenderPreparedChartFrame = function(progress=1){
+  cancelAnimationLoop();
+  state.animationPlaying = false;
+  state.animationProgress = shouldAnimate() ? clamp(+progress || 0, 0, 1) : 1;
+  draw();
+  return buildExportCanvas().exportCanvas;
+};
 window.addEventListener('message', event => {
   const data = event.data || {};
   if(data.type === 'forma-chart-render-request'){ renderResponsiveForForma(data.payload || {}); return; }

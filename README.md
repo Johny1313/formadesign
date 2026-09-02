@@ -1,4 +1,4 @@
-# FORMA DESIGN 0.9.7.5.31
+# FORMA DESIGN 0.9.7.5.32
 
 Projeto independente do editor FORMA DESIGN.
 
@@ -97,7 +97,7 @@ A exclusão múltipla também é suportada. Campos de texto, inputs e edição i
 - O elemento pode ser selecionado novamente e reaberto no Chart Studio para nova edição.
 
 
-## Remove BG — v0.9.7.5.31
+## Remove BG — v0.9.7.5.32
 
 - Corrigido para imagens locais, externas, GIPHY e assets via proxy.
 - Tenta primeiro `/api/remove-bg` no Worker.
@@ -107,17 +107,17 @@ A exclusão múltipla também é suportada. Campos de texto, inputs e edição i
 - Mensagens de erro preservam o motivo retornado pela API.
 
 
-## Deploy verification — v0.9.7.5.31
+## Deploy verification — v0.9.7.5.32
 
 After `npm install` and `npm run deploy`, verify:
 
-- `/api/health` returns `version: 0.9.7.5.31`.
-- `/design/` shows `0.9.7.5.31` in the top bar.
-- responses under `/design/` include `X-Forma-Version: 0.9.7.5.31` and `Cache-Control: no-store`.
+- `/api/health` returns `version: 0.9.7.5.32`.
+- `/design/` shows `0.9.7.5.32` in the top bar.
+- responses under `/design/` include `X-Forma-Version: 0.9.7.5.32` and `Cache-Control: no-store`.
 - Chart Studio PNG export keeps transparent pixels outside the chart.
 - Forma > Shapes > Line is stroke-only, with no fill controls and 0.25px increments.
 
-## Chart Studio — v0.9.7.5.31
+## Chart Studio — v0.9.7.5.32
 
 - Linha e Área agora detectam todas as colunas após a cronologia: A = período; B..N = séries/categorias.
 - O caminho legado de uma única série foi preservado sem alteração de renderização.
@@ -125,7 +125,7 @@ After `npm install` and `npm run deploy`, verify:
 - Em múltiplas séries, cada coluna recebe stroke/cor independente e legenda pelo cabeçalho do CSV.
 - Teste de regressão `scripts/test-chart-multiseries.mjs` impede retorno ao parser fixo em `r[1]` para Linha/Área.
 
-## Chart responsive resize — v0.9.7.5.31
+## Chart responsive resize — v0.9.7.5.32
 
 - Gráficos integrados continuam redimensionáveis diretamente na prancheta.
 - Durante o arraste, o gráfico acompanha toda a área do elemento, sem criar letterbox/espaço vazio por `object-fit: contain`.
@@ -137,7 +137,7 @@ After `npm install` and `npm run deploy`, verify:
 - `npm run check` agora inclui `CHART_RESPONSIVE_RESIZE_TEST` além dos testes já existentes de Remove BG e CSV multi-séries.
 
 
-## Axis typography — v0.9.7.5.31
+## Axis typography — v0.9.7.5.32
 
 - Independent font-size controls for X-axis labels (`valor/data/categoria`) and Y-axis index/tick labels.
 - Range: 6–96 px, default 10 px.
@@ -146,7 +146,7 @@ After `npm install` and `npm run deploy`, verify:
 - Settings persist in Chart Studio config and are preserved when reopening/responsive re-rendering inside the artboard.
 - Line Chart Race uses the same X/Y axis font-size controls.
 
-## v0.9.7.5.31 — Layout, palette themes, fill/stroke and export chooser
+## v0.9.7.5.32 — Layout, palette themes, fill/stroke and export chooser
 
 - Color templates moved from **Fundo** to the new **Layout** tab.
 - Palettes can be applied to the current artboard, remapping background, text, text boxes, shape fills, line/shape strokes, gradients, mask borders and chart series colors.
@@ -156,7 +156,7 @@ After `npm install` and `npm run deploy`, verify:
 - Clicking **Baixar** opens a format chooser instead of relying on a fixed selector.
 - Export choices: PNG, transparent PNG, H264, WEBM, transparent WEBM, WEBP and SVG. H264/alpha video output depends on browser codec support.
 
-## Shared library + Projects — v0.9.7.5.31
+## Shared library + Projects — v0.9.7.5.32
 
 - Design templates and color palettes are now persisted in the existing D1 database through `/api/library` and are shared by everyone opening the same FORMA deployment.
 - Existing templates/palettes stored in the current browser migrate once to D1 after the first load of this version. D1 becomes authoritative afterward so deleted shared assets are not recreated by old local caches.
@@ -165,7 +165,7 @@ After `npm install` and `npm run deploy`, verify:
 - The `Projetos` tab is restored. It lists D1 projects, opens them as editable FORMA projects, updates the same project on Save, and supports deletion.
 - `/api/projects/:id` now supports DELETE and project create/update returns a top-level `id` for frontend compatibility.
 
-## Clipboard e agrupamento — v0.9.7.5.31
+## Clipboard e agrupamento — v0.9.7.5.32
 
 - `Ctrl+C` / `Cmd+C`: copia a seleção atual para o clipboard interno do FORMA.
 - `Ctrl+V` / `Cmd+V`: cola na prancheta ativa; funciona depois de trocar de prancheta.
@@ -176,7 +176,7 @@ After `npm install` and `npm run deploy`, verify:
 - Copiar, colar, duplicar, excluir, mover, trazer para frente e enviar para trás respeitam os vínculos de grupo.
 - Textos e máscaras dentro de grupos continuam editáveis individualmente por duplo clique.
 
-## Rich text + alinhamento — v0.9.7.5.31
+## Rich text + alinhamento — v0.9.7.5.32
 
 - Um único elemento de texto pode ter trechos com fonte, peso e cor independentes.
 - Selecione um trecho enquanto o texto está em edição e use os mesmos controles de Fonte, Peso e Cor.
@@ -187,17 +187,26 @@ After `npm install` and `npm run deploy`, verify:
 - Alinhamento da seleção à prancheta preserva a posição relativa dos elementos internos.
 - Com 3 ou mais objetos/grupos selecionados, distribuição horizontal ou vertical cria espaçamento igual.
 
-## Clipboard + planilha de colagem — v0.9.7.5.31
+## Clipboard + planilha de colagem — v0.9.7.5.32
 - Corrige regressão de Ctrl+C / Ctrl+V após a introdução do rich text: o clipboard de elementos só é bloqueado quando o foco está realmente em input, textarea, select ou contenteditable.
 - Mantém cópia nativa de texto quando o cursor está dentro da edição textual.
 - `Colar dados na planilha` não tenta mais ler silenciosamente o clipboard do navegador.
 - O botão abre a planilha em modo ampliado, foca a primeira célula e aguarda Ctrl+V / Cmd+V.
 - Escape ou `Fechar planilha` retorna ao Chart Studio normal.
 
-## Planilha — cabeçalho obrigatório na primeira linha (v0.9.7.5.31)
+## Planilha — cabeçalho obrigatório na primeira linha (v0.9.7.5.32)
 
 - A primeira linha colada/importada é sempre interpretada como cabeçalho das colunas.
 - Os dados usados pelo gráfico começam obrigatoriamente na segunda linha.
 - A grade marca visualmente a primeira linha como cabeçalho (`H`).
 - O status da planilha mostra separadamente `Cabeçalho + N linhas de dados`.
 - Exemplo: `candidato | indice` é cabeçalho; `estagio | 14` e `jovem aprendiz | 9` são dados.
+
+## Video fidelity lock — v0.9.7.5.32
+
+- Board H264/WEBM export is now frame-driven instead of recording a static canvas.
+- The compositor clears and rebuilds the full board on every recorded frame, preserving layer order and avoiding accumulated/duplicated text artifacts.
+- Media assets are preloaded once and reused while recording.
+- Embedded FORMA charts get dedicated hidden Chart Studio renderers. Their frame progress is driven by the original chart animation duration and speed stored in `chartConfig`.
+- If multiple animated charts exist on the board, the video duration follows the longest enabled chart animation; shorter animations remain on their final frame.
+- Rich-text canvas export now falls back safely to the canonical plain-text content if stored rich HTML no longer matches the text model, preventing duplicated text in raster/video exports.
