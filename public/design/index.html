@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FORMA DESIGN 0.9.7.5.36</title>
+  <title>FORMA DESIGN 0.9.7.5.37</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=Lato:wght@300;400;700;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Nunito:wght@300;400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@
       <div class="brand-wrap">
         <div class="brand-mark">F</div>
         <div>
-          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.36</b></div>
+          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.37</b></div>
           <div class="brand-sub">Editor visual de design, conteúdo e gráficos</div>
         </div>
       </div>
@@ -2539,7 +2539,7 @@
     return {
       contractVersion:'ronda-one-production-v2',
       source:'forma-direct-article',
-      sourceVersion:'0.9.7.5.36',
+      sourceVersion:'0.9.7.5.37',
       title,
       editoria:data?.editoria||'Notícias',
       slides:(data?.slides||[]).map((slide,index)=>({...slide,number:Number(slide.number)||index+1})),
@@ -2695,8 +2695,10 @@
 
   function buildTextExportDom(e){
     const host=document.createElement('div');
+    host.className=`canvas-el text-el ${e.textBoxEnabled?'text-box-active':''}`.trim();
     host.style.cssText=`position:fixed;left:-30000px;top:0;width:${Math.max(1,e.w)}px;height:${Math.max(1,e.h)}px;transform:none;opacity:.001;pointer-events:none;z-index:-10000;box-sizing:border-box;overflow:${e.textBoxEnabled?'visible':'hidden'};`;
     const content=document.createElement('div');
+    content.className='el-content';
     renderRichTextInto(content,e);
     content.style.width='100%';content.style.height='100%';content.style.pointerEvents='none';content.style.boxSizing='border-box';
     content.style.whiteSpace='pre-wrap';content.style.overflowWrap='break-word';content.style.wordBreak='normal';content.style.overflow=e.textBoxEnabled?'visible':'hidden';content.style.display='block';
@@ -2706,6 +2708,63 @@
   }
   function textNodeEntries(root){const out=[];const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let node;while((node=walker.nextNode()))out.push(node);return out;}
   function canvasFontFromComputed(style){const fontStyle=style.fontStyle&&style.fontStyle!=='normal'?style.fontStyle+' ':'';const fontWeight=style.fontWeight||'400';const fontSize=style.fontSize||'16px';return `${fontStyle}${fontWeight} ${fontSize} ${style.fontFamily||'Arial, sans-serif'}`;}
+  function textExportFragmentKey(rect,style){return `${Math.round(rect.top*10)/10}|${style.fontFamily}|${style.fontSize}|${style.fontWeight}|${style.fontStyle}|${style.color}|${style.letterSpacing}`;}
+  function collectDomTextFragments(content,hostRect,e){
+    const fragments=[];
+    for(const node of textNodeEntries(content)){
+      const raw=String(node.nodeValue||'');
+      if(!raw)continue;
+      const parent=node.parentElement||content;
+      const style=getComputedStyle(parent);
+      let current=null,offset=0;
+      for(const cp of Array.from(raw)){
+        const next=offset+cp.length;
+        const range=document.createRange();
+        try{range.setStart(node,offset);range.setEnd(node,next);}catch{offset=next;continue;}
+        const rect=range.getClientRects()[0];
+        offset=next;
+        if(!rect){
+          if(current&&cp==='\n'){fragments.push(current);current=null;}
+          continue;
+        }
+        const key=textExportFragmentKey(rect,style);
+        const rendered=(e.uppercase||style.textTransform==='uppercase')?cp.toLocaleUpperCase('pt-BR'):cp;
+        if(!current||current.key!==key){
+          if(current)fragments.push(current);
+          current={key,text:rendered,x:rect.left-hostRect.left,top:rect.top-hostRect.top,height:rect.height,right:rect.right-hostRect.left,style};
+        }else{
+          current.text+=rendered;
+          current.right=Math.max(current.right,rect.right-hostRect.left);
+          current.height=Math.max(current.height,rect.height);
+        }
+      }
+      if(current)fragments.push(current);
+    }
+    return fragments.filter(fragment=>fragment.text.length>0);
+  }
+  function drawDomTextFragment(c,fragment,e){
+    const style=fragment.style;
+    c.save();
+    c.font=canvasFontFromComputed(style);
+    c.fillStyle=style.color||e.textColor||'#111';
+    c.textAlign='left';
+    c.textBaseline='alphabetic';
+    if('fontKerning' in c)c.fontKerning='normal';
+    if('letterSpacing' in c)c.letterSpacing=style.letterSpacing||`${e.letterSpacing||0}px`;
+    const metrics=c.measureText(fragment.text);
+    const fontSize=parseFloat(style.fontSize||e.fontSize||16)||16;
+    const ascent=metrics.actualBoundingBoxAscent||fontSize*.8;
+    const descent=metrics.actualBoundingBoxDescent||fontSize*.2;
+    const glyphH=Math.max(1,ascent+descent);
+    const baseline=fragment.top+Math.max(0,(fragment.height-glyphH)/2)+ascent;
+    const targetW=Math.max(0,fragment.right-fragment.x);
+    const measuredW=Math.max(.001,metrics.width);
+    const ratio=targetW>0?targetW/measuredW:1;
+    c.translate(fragment.x,baseline);
+    if(Number.isFinite(ratio)&&ratio>0&&Math.abs(ratio-1)>.015)c.scale(ratio,1);
+    c.fillText(fragment.text,0,0);
+    c.restore();
+  }
   async function rasterizeTextElementFromDom(e){
     try{await document.fonts.ready;}catch{}
     const {host,content}=buildTextExportDom(e);
@@ -2716,17 +2775,8 @@
       const height=Math.max(1,Math.ceil(e.textBoxEnabled?Math.max(e.h,contentRect.bottom-hostRect.top):e.h));
       const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const c=canvas.getContext('2d');
       if(e.textBoxEnabled){c.fillStyle=normalizeHex(e.textBoxColor||'#ffffff');c.fillRect(Math.max(0,contentRect.left-hostRect.left),Math.max(0,contentRect.top-hostRect.top),Math.min(width,contentRect.width),Math.min(height,contentRect.height));}
-      for(const node of textNodeEntries(content)){
-        const parent=node.parentElement||content;const style=getComputedStyle(parent);const raw=String(node.nodeValue||'');let offset=0;
-        for(const cp of Array.from(raw)){
-          const next=offset+cp.length;const range=document.createRange();
-          try{range.setStart(node,offset);range.setEnd(node,next);}catch{offset=next;continue;}
-          const rect=range.getClientRects()[0];offset=next;if(!rect||rect.width===0&&/^\s*$/.test(cp))continue;
-          const char=e.uppercase?cp.toLocaleUpperCase('pt-BR'):cp;c.font=canvasFontFromComputed(style);c.fillStyle=style.color||e.textColor||'#111';c.textAlign='left';c.textBaseline='alphabetic';
-          const metrics=c.measureText(char);const ascent=metrics.actualBoundingBoxAscent||parseFloat(style.fontSize||e.fontSize||16)*.8;const descent=metrics.actualBoundingBoxDescent||parseFloat(style.fontSize||e.fontSize||16)*.2;const glyphH=Math.max(1,ascent+descent);const baseline=(rect.top-hostRect.top)+Math.max(0,(rect.height-glyphH)/2)+ascent;
-          c.fillText(char,rect.left-hostRect.left,baseline);
-        }
-      }
+      const fragments=collectDomTextFragments(content,hostRect,e);
+      for(const fragment of fragments)drawDomTextFragment(c,fragment,e);
       return canvas;
     } finally {host.remove();}
   }

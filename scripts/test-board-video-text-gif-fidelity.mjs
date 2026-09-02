@@ -4,7 +4,7 @@ const checks = [
   ['DOM text export builder exists', /function buildTextExportDom\(e\)/],
   ['Text rasterizer uses DOM layout', /async function rasterizeTextElementFromDom\(e\)/],
   ['Text rasterizer reads Range client rects', /range\.getClientRects\(\)\[0\]/],
-  ['Text rasterizer uses computed span styles', /const parent=node\.parentElement\|\|content;const style=getComputedStyle\(parent\)/],
+  ['Text rasterizer uses computed span styles', /const parent=node\.parentElement\|\|content;\s*const style=getComputedStyle\(parent\);/],
   ['Static board export pre-rasterizes text', /textAssets\.set\(e\.id,await rasterizeTextElementFromDom\(e\)\)/],
   ['Video assets pre-rasterize text', /if\(e\.type==='text'\)\{try\{assets\.set\(e\.id,await rasterizeTextElementFromDom\(e\)\)/],
   ['Prepared video draws text bitmap once', /if\(e\.type==='text'\)\{if\(asset\)ctx\.drawImage\(asset,0,0\)/],
