@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FORMA DESIGN 0.9.7.5.27</title>
+  <title>FORMA DESIGN 0.9.7.5.28</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=Lato:wght@300;400;700;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Nunito:wght@300;400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@
       <div class="brand-wrap">
         <div class="brand-mark">F</div>
         <div>
-          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.27</b></div>
+          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.28</b></div>
           <div class="brand-sub">Editor visual de design, conteúdo e gráficos</div>
         </div>
       </div>
@@ -1892,7 +1892,7 @@
   function isTextInputTarget(target){if(!target)return false;const tag=String(target.tagName||'').toLowerCase();return target.isContentEditable||tag==='input'||tag==='textarea'||tag==='select'||!!target.closest?.('[contenteditable="true"]');}
   document.addEventListener('keydown',ev=>{
     if(ev.key==='Escape'){hideLayerContextMenu();return;}
-    const typing=isTextInputTarget(ev.target)||state.editingTextId;
+    const typing=isTextInputTarget(ev.target);
     const mod=ev.ctrlKey||ev.metaKey;
     const key=String(ev.key||'').toLowerCase();
     if(mod&&!typing&&key==='z'){
@@ -1984,7 +1984,7 @@
     return elements;
   }
   function copySelectedToClipboard(){
-    if(isTextInputTarget(document.activeElement)||state.editingTextId)return false;
+    if(isTextInputTarget(document.activeElement))return false;
     const ids=selectedIdsForAction();if(!ids.length)return false;
     const elements=ids.map(id=>state.elements.find(e=>e.id===id)).filter(Boolean).map(clone);
     if(!elements.length)return false;
@@ -2539,7 +2539,7 @@
     return {
       contractVersion:'ronda-one-production-v2',
       source:'forma-direct-article',
-      sourceVersion:'0.9.7.5.27',
+      sourceVersion:'0.9.7.5.28',
       title,
       editoria:data?.editoria||'Notícias',
       slides:(data?.slides||[]).map((slide,index)=>({...slide,number:Number(slide.number)||index+1})),
