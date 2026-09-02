@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FORMA DESIGN 0.9.7.5.35</title>
+  <title>FORMA DESIGN 0.9.7.5.36</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=Lato:wght@300;400;700;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Nunito:wght@300;400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@
       <div class="brand-wrap">
         <div class="brand-mark">F</div>
         <div>
-          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.35</b></div>
+          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.36</b></div>
           <div class="brand-sub">Editor visual de design, conteúdo e gráficos</div>
         </div>
       </div>
@@ -2539,7 +2539,7 @@
     return {
       contractVersion:'ronda-one-production-v2',
       source:'forma-direct-article',
-      sourceVersion:'0.9.7.5.35',
+      sourceVersion:'0.9.7.5.36',
       title,
       editoria:data?.editoria||'Notícias',
       slides:(data?.slides||[]).map((slide,index)=>({...slide,number:Number(slide.number)||index+1})),
@@ -2868,11 +2868,33 @@
     const out=document.createElement('canvas');out.width=board?.width||state.width;out.height=board?.height||state.height;const c=out.getContext('2d');if(transparent)out.dataset.transparent='1';
     const assets=await preloadBoardVideoAssets(board);const chartRenderers=await createBoardChartVideoRenderers(board);await prepareBoardAnimatedGifAssets(board,assets);
     const animatedDurations=[...chartRenderers.values()].filter(item=>item.animated).map(item=>item.durationMs).filter(v=>v>0);const gifDurations=[...(assets.gifDurations||[])].filter(v=>v>0);const durationMs=animatedDurations.length?Math.max(...animatedDurations):(gifDurations.length?Math.max(...gifDurations):1000);
-    const stream=out.captureStream(30),chunks=[],rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:10_000_000});rec.ondataavailable=e=>{if(e.data?.size)chunks.push(e.data);};
+    const fps=30;
+    let stream=out.captureStream(0),videoTrack=stream.getVideoTracks()[0]||null;
+    const manualFrames=!!(videoTrack&&typeof videoTrack.requestFrame==='function');
+    if(!manualFrames){stream.getTracks().forEach(track=>track.stop());stream=out.captureStream(fps);videoTrack=stream.getVideoTracks()[0]||null;}
+    const requestCapturedFrame=()=>{try{if(manualFrames&&videoTrack?.requestFrame)videoTrack.requestFrame();}catch{}};
+    const chunks=[],rec=new MediaRecorder(stream,{mimeType:mime,videoBitsPerSecond:10_000_000});rec.ondataavailable=e=>{if(e.data?.size)chunks.push(e.data);};
     try{
-      drawBoardVideoFrame(c,board,assets,chartRenderers,0);rec.start(250);const started=performance.now();
-      await new Promise(resolve=>{const tick=now=>{const elapsed=Math.min(durationMs,Math.max(0,now-started));drawBoardVideoFrame(c,board,assets,chartRenderers,elapsed);if(elapsed>=durationMs){requestAnimationFrame(()=>{drawBoardVideoFrame(c,board,assets,chartRenderers,durationMs);resolve();});return;}requestAnimationFrame(tick);};requestAnimationFrame(tick);});
-      await new Promise(resolve=>setTimeout(resolve,40));await new Promise(resolve=>{rec.onstop=resolve;rec.stop();});
+      drawBoardVideoFrame(c,board,assets,chartRenderers,0);rec.start(250);requestCapturedFrame();const started=performance.now();
+      await new Promise(resolve=>{
+        const tick=now=>{
+          const elapsed=Math.min(durationMs,Math.max(0,now-started));
+          drawBoardVideoFrame(c,board,assets,chartRenderers,elapsed);
+          requestCapturedFrame();
+          if(elapsed>=durationMs){
+            drawBoardVideoFrame(c,board,assets,chartRenderers,durationMs);
+            requestCapturedFrame();
+            requestAnimationFrame(()=>{drawBoardVideoFrame(c,board,assets,chartRenderers,durationMs);requestCapturedFrame();resolve();});
+            return;
+          }
+          requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+      });
+      await new Promise(resolve=>setTimeout(resolve,90));
+      drawBoardVideoFrame(c,board,assets,chartRenderers,durationMs);requestCapturedFrame();
+      await new Promise(resolve=>setTimeout(resolve,35));
+      await new Promise(resolve=>{rec.onstop=resolve;rec.stop();});
     }finally{cleanupBoardChartVideoRenderers(chartRenderers);cleanupBoardVideoAssets(assets);stream.getTracks().forEach(track=>track.stop());}
     const blob=new Blob(chunks,{type:mime});if(blob.size<1024)throw new Error('O navegador não gerou frames suficientes para o vídeo.');return {blob,extension:h264?'mp4':'webm'};
   }
