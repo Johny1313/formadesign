@@ -1,6 +1,6 @@
 {
   "product": "FORMA DESIGN",
-  "version": "0.9.7.5.28",
+  "version": "0.9.7.5.29",
   "ronda_one_in_project": false,
   "projects_page_or_tab": false,
   "save_project_function": true,
@@ -138,5 +138,12 @@
     "history_preserved": true,
     "export_uses_exact_chart_area": true,
     "regression_test": "CHART_RESPONSIVE_RESIZE_TEST: PASS"
+  },
+  "sheet_header_rule": {
+    "enabled": true,
+    "first_row_is_header": true,
+    "data_starts_at_second_row": true,
+    "header_visual_marker": "H",
+    "regression_test": "SHEET_HEADER_ROW_TEST: PASS"
   }
 }

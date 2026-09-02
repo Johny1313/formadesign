@@ -39,7 +39,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 .app{height:100vh;display:grid;grid-template-rows:66px 1fr;background:var(--bg)}
 
-/* Embedded only inside FORMA DESIGN 0.9.7.5.28 */
+/* Embedded only inside FORMA DESIGN 0.9.7.5.29 */
 body{background:#d8d6d1}
 .app{height:100vh;grid-template-rows:1fr}
 .topbar{display:none!important}
@@ -276,7 +276,10 @@ canvas{display:block;width:100%;height:100%}
   background:transparent;color:var(--text);padding:6px 8px;font-size:10px;outline:none;
   box-shadow:none!important
 }
-.sheet-grid tr:first-child td input{font-weight:750;background:#faf9f6}
+.sheet-grid tr:first-child td input{font-weight:800;background:#f3f1ff;color:#2f2a68}
+.sheet-grid tr.sheet-header-row td{background:#f8f7ff;border-bottom:2px solid #bdb7ff}
+.sheet-grid tr.sheet-header-row td input{font-weight:800;background:#f3f1ff;color:#2f2a68}
+.sheet-grid .row-index.header-index{background:#e9e6ff;color:#5147cc;font-weight:900}
 .sheet-grid td input:focus{box-shadow:inset 0 0 0 2px var(--accent)!important;background:#fbfaff}
 .sheet-empty{padding:18px;text-align:center;color:var(--muted);font-size:10px}
 .paste-btn{
@@ -389,7 +392,7 @@ body.embed-mode .app{min-height:100vh}
             <div class="sheet-paste-toolbar" id="sheetPasteToolbar">
               <div>
                 <strong>Planilha de dados</strong>
-                <span>Cole com Ctrl+V / Cmd+V a partir do Excel, Google Sheets ou CSV.</span>
+                <span>A primeira linha colada é o cabeçalho. Os dados começam na segunda linha. Cole com Ctrl+V / Cmd+V.</span>
               </div>
               <button class="btn" id="closeSheetPasteBtn" type="button">Fechar planilha</button>
             </div>
@@ -743,10 +746,12 @@ function splitCSVLine(line, delimiter){
 }
 
 function parseData(text){
-  const lines = text.trim().split(/\r?\n/).filter(Boolean);
-  if(lines.length < 2) return {headers:[],rows:[]};
+  const lines = String(text ?? '').replace(/\r/g,'').split('\n').filter(line => line.trim().length > 0);
+  if(!lines.length) return {headers:[],rows:[]};
   const delimiter = lines[0].split(';').length > lines[0].split(',').length ? ';' : ',';
-  return {headers:splitCSVLine(lines[0], delimiter), rows:lines.slice(1).map(line => splitCSVLine(line, delimiter))};
+  const headers = splitCSVLine(lines[0], delimiter);
+  const rows = lines.slice(1).map(line => splitCSVLine(line, delimiter));
+  return {headers, rows};
 }
 
 
@@ -827,9 +832,10 @@ function renderSheet(){
   html += '</tr></thead><tbody>';
 
   for(let r=0;r<sheetMatrix.length;r++){
-    html += `<tr><th class="row-index">${r+1}</th>`;
+    const isHeader = r === 0;
+    html += `<tr class="${isHeader ? 'sheet-header-row' : ''}"><th class="row-index ${isHeader ? 'header-index' : ''}" title="${isHeader ? 'Cabeçalho' : `Linha de dados ${r + 1}`}">${isHeader ? 'H' : r + 1}</th>`;
     for(let c=0;c<cols;c++){
-      html += `<td><input class="sheet-cell" data-row="${r}" data-col="${c}" value="${escapeHtml(sheetMatrix[r][c])}"></td>`;
+      html += `<td><input class="sheet-cell" data-row="${r}" data-col="${c}" value="${escapeHtml(sheetMatrix[r][c])}" ${isHeader ? 'aria-label="Cabeçalho"' : ''}></td>`;
     }
     html += '</tr>';
   }
@@ -1184,10 +1190,11 @@ function getCustomYTicks(){
 
 function updateTable(){
   const parsed = parseData($('dataInput').value);
-  const totalRows = sheetMatrix.length || (parsed.rows.length ? parsed.rows.length + 1 : 0);
+  const hasHeader = parsed.headers.length > 0;
+  const dataRows = parsed.rows.length;
   const totalCols = sheetMatrix[0]?.length || parsed.headers.length || 0;
-  $('parseStatus').textContent = totalRows
-    ? `${totalRows} linhas × ${totalCols} colunas`
+  $('parseStatus').textContent = hasHeader
+    ? `Cabeçalho + ${dataRows} linha${dataRows===1?'':'s'} de dados × ${totalCols} coluna${totalCols===1?'':'s'}`
     : 'Sem dados';
   renderItemList();
   draw();
