@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FORMA DESIGN 0.9.7.5.38</title>
+  <title>FORMA DESIGN 0.9.7.5.39</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=Lato:wght@300;400;700;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Nunito:wght@300;400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@
       <div class="brand-wrap">
         <div class="brand-mark">F</div>
         <div>
-          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.38</b></div>
+          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.39</b></div>
           <div class="brand-sub">Editor visual de design, conteúdo e gráficos</div>
         </div>
       </div>
@@ -2563,7 +2563,7 @@
     return {
       contractVersion:'ronda-one-production-v2',
       source:'forma-direct-article',
-      sourceVersion:'0.9.7.5.38',
+      sourceVersion:'0.9.7.5.39',
       title,
       editoria:data?.editoria||'Notícias',
       slides:(data?.slides||[]).map((slide,index)=>({...slide,number:Number(slide.number)||index+1})),
@@ -2732,75 +2732,45 @@
   }
   function textNodeEntries(root){const out=[];const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let node;while((node=walker.nextNode()))out.push(node);return out;}
   function canvasFontFromComputed(style){const fontStyle=style.fontStyle&&style.fontStyle!=='normal'?style.fontStyle+' ':'';const fontWeight=style.fontWeight||'400';const fontSize=style.fontSize||'16px';return `${fontStyle}${fontWeight} ${fontSize} ${style.fontFamily||'Arial, sans-serif'}`;}
-  function textExportFragmentKey(rect,style){return `${Math.round(rect.top*10)/10}|${style.fontFamily}|${style.fontSize}|${style.fontWeight}|${style.fontStyle}|${style.color}|${style.letterSpacing}`;}
-  function collectDomTextFragments(content,hostRect,e){
-    const fragments=[];
-    for(const node of textNodeEntries(content)){
-      const raw=String(node.nodeValue||'');
-      if(!raw)continue;
-      const parent=node.parentElement||content;
-      const style=getComputedStyle(parent);
-      let current=null,offset=0;
-      for(const cp of Array.from(raw)){
-        const next=offset+cp.length;
-        const range=document.createRange();
-        try{range.setStart(node,offset);range.setEnd(node,next);}catch{offset=next;continue;}
-        const rect=range.getClientRects()[0];
-        offset=next;
-        if(!rect){
-          if(current&&cp==='\n'){fragments.push(current);current=null;}
-          continue;
-        }
-        const key=textExportFragmentKey(rect,style);
-        const rendered=(e.uppercase||style.textTransform==='uppercase')?cp.toLocaleUpperCase('pt-BR'):cp;
-        if(!current||current.key!==key){
-          if(current)fragments.push(current);
-          current={key,text:rendered,x:rect.left-hostRect.left,top:rect.top-hostRect.top,height:rect.height,right:rect.right-hostRect.left,style};
-        }else{
-          current.text+=rendered;
-          current.right=Math.max(current.right,rect.right-hostRect.left);
-          current.height=Math.max(current.height,rect.height);
-        }
-      }
-      if(current)fragments.push(current);
-    }
-    return fragments.filter(fragment=>fragment.text.length>0);
-  }
-  function drawDomTextFragment(c,fragment,e){
-    const style=fragment.style;
-    c.save();
-    c.font=canvasFontFromComputed(style);
-    c.fillStyle=style.color||e.textColor||'#111';
-    c.textAlign='left';
-    c.textBaseline='alphabetic';
-    if('fontKerning' in c)c.fontKerning='normal';
-    if('letterSpacing' in c)c.letterSpacing=style.letterSpacing||`${e.letterSpacing||0}px`;
-    const metrics=c.measureText(fragment.text);
-    const fontSize=parseFloat(style.fontSize||e.fontSize||16)||16;
-    const ascent=metrics.actualBoundingBoxAscent||fontSize*.8;
-    const descent=metrics.actualBoundingBoxDescent||fontSize*.2;
-    const glyphH=Math.max(1,ascent+descent);
-    const baseline=fragment.top+Math.max(0,(fragment.height-glyphH)/2)+ascent;
-    const targetW=Math.max(0,fragment.right-fragment.x);
-    const measuredW=Math.max(.001,metrics.width);
-    const ratio=targetW>0?targetW/measuredW:1;
-    c.translate(fragment.x,baseline);
-    if(Number.isFinite(ratio)&&ratio>0&&Math.abs(ratio-1)>.015)c.scale(ratio,1);
-    c.fillText(fragment.text,0,0);
-    c.restore();
+  function buildTextForeignObjectSvg(content,width,height){
+    const clone=content.cloneNode(true);
+    clone.setAttribute('xmlns','http://www.w3.org/1999/xhtml');
+    const wrapper=document.createElement('div');
+    wrapper.setAttribute('xmlns','http://www.w3.org/1999/xhtml');
+    wrapper.style.width=`${Math.max(1,width)}px`;
+    wrapper.style.height=`${Math.max(1,height)}px`;
+    wrapper.style.boxSizing='border-box';
+    wrapper.style.overflow='hidden';
+    wrapper.style.background='transparent';
+    wrapper.appendChild(clone);
+    const html=new XMLSerializer().serializeToString(wrapper);
+    return `<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${Math.max(1,width)}" height="${Math.max(1,height)}" viewBox="0 0 ${Math.max(1,width)} ${Math.max(1,height)}"><foreignObject width="100%" height="100%">${html}</foreignObject></svg>`;
   }
   async function rasterizeTextElementFromDom(e){
     try{await document.fonts.ready;}catch{}
     const {host,content}=buildTextExportDom(e);
     try{
-      await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+      await new Promise(resolve=>requestAnimationFrame(()=>resolve()));
       const hostRect=host.getBoundingClientRect(),contentRect=content.getBoundingClientRect();
       const width=Math.max(1,Math.ceil(e.w));
       const height=Math.max(1,Math.ceil(e.textBoxEnabled?Math.max(e.h,contentRect.bottom-hostRect.top):e.h));
+      const svg=buildTextForeignObjectSvg(content,width,height);
+      const blob=new Blob([svg],{type:'image/svg+xml;charset=utf-8'});
+      const url=URL.createObjectURL(blob);
+      try{
+        const img=new Image();
+        img.decoding='sync';
+        await new Promise((resolve,reject)=>{img.onload=()=>resolve();img.onerror=()=>reject(new Error('Falha ao rasterizar o texto.'));img.src=url;});
+        const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const c=canvas.getContext('2d');
+        c.clearRect(0,0,width,height);
+        c.drawImage(img,0,0,width,height);
+        return canvas;
+      } finally {URL.revokeObjectURL(url);}
+    } catch(error) {
+      const width=Math.max(1,Math.ceil(e.w));
+      const height=Math.max(1,Math.ceil(e.h));
       const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;const c=canvas.getContext('2d');
-      if(e.textBoxEnabled){c.fillStyle=normalizeHex(e.textBoxColor||'#ffffff');c.fillRect(Math.max(0,contentRect.left-hostRect.left),Math.max(0,contentRect.top-hostRect.top),Math.min(width,contentRect.width),Math.min(height,contentRect.height));}
-      const fragments=collectDomTextFragments(content,hostRect,e);
-      for(const fragment of fragments)drawDomTextFragment(c,fragment,e);
+      drawRichTextElementCanvas(c,e);
       return canvas;
     } finally {host.remove();}
   }
@@ -2854,16 +2824,26 @@
     for(let i=asset.frames.length-1;i>=0;i--){if(local>=asset.frames[i].startMs)return asset.frames[i].bitmap;}
     return asset.frames[0].bitmap;
   }
+  async function preloadBoardStaticAssets(board){
+    const assets=new Map();
+    const jobs=(board?.elements||[]).filter(e=>e?.visible).map(async e=>{
+      try{
+        if(e.type==='text'){assets.set(e.id,await rasterizeTextElementFromDom(e));return;}
+        if((e.type==='image'||e.type==='mask')&&e.src){assets.set(e.id,await loadImage(e.src));}
+      }catch{}
+    });
+    await Promise.all(jobs);
+    return assets;
+  }
   async function renderBoardCanvas(board,options={}){
     const safeBoard=board||currentBoardData();
     try{await document.fonts.ready;}catch{}
-    const textAssets=new Map();
-    for(const e of (safeBoard.elements||[])){if(e?.visible&&e.type==='text'){try{textAssets.set(e.id,await rasterizeTextElementFromDom(e));}catch{}}}
+    const staticAssets=await preloadBoardStaticAssets(safeBoard);
     const canvas=document.createElement('canvas');canvas.width=safeBoard.width||state.width;canvas.height=safeBoard.height||state.height;const ctx=canvas.getContext('2d');if(!options.transparent)boardBackgroundPaint(ctx,safeBoard);
     for(const e of (safeBoard.elements||[])){if(!e.visible)continue;ctx.save();ctx.globalAlpha=(e.opacity??100)/100;const cx=e.x+e.w/2,cy=e.y+e.h/2;ctx.translate(cx,cy);ctx.rotate((e.rotation||0)*Math.PI/180);ctx.translate(-e.w/2,-e.h/2);
-      if(e.type==='text'){const textAsset=textAssets.get(e.id);if(textAsset)ctx.drawImage(textAsset,0,0);else drawRichTextElementCanvas(ctx,e);}
-      else if(e.type==='image'){try{const img=await loadImage(e.src);if(isChartElement(e))ctx.drawImage(img,0,0,e.w,e.h);else drawImageFit(ctx,img,e.w,e.h,e.objectFit||'cover');}catch{}}
-      else if(e.type==='mask'){maskPath(ctx,e);ctx.clip();if(e.src){try{const img=await loadImage(e.src);drawMaskedImage(ctx,img,e);}catch{}}else{ctx.fillStyle='#ddd';ctx.fillRect(0,0,e.w,e.h);}if(e.borderWidth){ctx.restore();ctx.save();ctx.globalAlpha=(e.opacity??100)/100;ctx.translate(cx,cy);ctx.rotate((e.rotation||0)*Math.PI/180);ctx.translate(-e.w/2,-e.h/2);ctx.strokeStyle=e.borderColor||'#fff';ctx.lineWidth=e.borderWidth*2;maskPath(ctx,e);ctx.stroke();}}
+      if(e.type==='text'){const textAsset=staticAssets.get(e.id);if(textAsset)ctx.drawImage(textAsset,0,0);else drawRichTextElementCanvas(ctx,e);}
+      else if(e.type==='image'){const img=staticAssets.get(e.id);if(img){if(isChartElement(e))ctx.drawImage(img,0,0,e.w,e.h);else drawImageFit(ctx,img,e.w,e.h,e.objectFit||'cover');}}
+      else if(e.type==='mask'){maskPath(ctx,e);ctx.clip();const img=staticAssets.get(e.id);if(img)drawMaskedImage(ctx,img,e);else if(!e.src){ctx.fillStyle='#ddd';ctx.fillRect(0,0,e.w,e.h);}if(e.borderWidth){ctx.restore();ctx.save();ctx.globalAlpha=(e.opacity??100)/100;ctx.translate(cx,cy);ctx.rotate((e.rotation||0)*Math.PI/180);ctx.translate(-e.w/2,-e.h/2);ctx.strokeStyle=e.borderColor||'#fff';ctx.lineWidth=e.borderWidth*2;maskPath(ctx,e);ctx.stroke();}}
       else{ensureShapePaint(e);const dash=e.strokeStyle==='dashed'?[Math.max(.5,(Number(e.strokeWidth)||1)*.7),Math.max(3,(Number(e.strokeWidth)||1)*2.5)]:[];if(e.type==='line'){ctx.strokeStyle=e.strokeColor||'#151515';ctx.lineWidth=Math.max(.25,Number(e.strokeWidth)||2);ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash(dash);shapePath(ctx,e);ctx.stroke();}else{if(e.fillEnabled!==false){ctx.fillStyle=e.fillMode==='gradient'?canvasGradient(ctx,e.w,e.h,e.fillGradient):e.fill;shapePath(ctx,e);ctx.fill();}if(e.strokeWidth>0){ctx.strokeStyle=e.strokeColor||'#000';ctx.lineWidth=e.strokeWidth;ctx.lineJoin='round';ctx.lineCap='round';ctx.setLineDash(dash);shapePath(ctx,e);ctx.stroke();}}}ctx.restore();}
     return canvas;
   }
@@ -2875,22 +2855,24 @@
   async function boardSvgBlob(board){const canvas=await renderBoardCanvas(board,{transparent:true});const data=canvas.toDataURL('image/png');const w=board.width||state.width,h=board.height||state.height;const svg=`<?xml version="1.0" encoding="UTF-8"?><svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" viewBox="0 0 ${w} ${h}"><image href="${data}" width="${w}" height="${h}" preserveAspectRatio="none"/></svg>`;return new Blob([svg],{type:'image/svg+xml;charset=utf-8'});}
   async function preloadBoardVideoAssets(board){
     const assets=new Map();assets.gifDurations=[];assets.gifCleanups=[];
-    for(const e of (board?.elements||[])){
-      if(!e?.visible)continue;
-      if(e.type==='text'){try{assets.set(e.id,await rasterizeTextElementFromDom(e));}catch{}continue;}
-      if(isChartElement(e)&&e.chartConfig)continue;
-      if((e.type==='image'||e.type==='mask')&&e.src){
-        if(isAnimatedGifElement(e))continue;
-        try{assets.set(e.id,await loadImage(e.src));}catch{}
-      }
-    }
+    const jobs=(board?.elements||[]).filter(e=>e?.visible).map(async e=>{
+      try{
+        if(e.type==='text'){assets.set(e.id,await rasterizeTextElementFromDom(e));return;}
+        if(isChartElement(e)&&e.chartConfig)return;
+        if((e.type==='image'||e.type==='mask')&&e.src){
+          if(isAnimatedGifElement(e))return;
+          assets.set(e.id,await loadImage(e.src));
+        }
+      }catch{}
+    });
+    await Promise.all(jobs);
     return assets;
   }
   async function prepareBoardAnimatedGifAssets(board,assets){
-    for(const e of (board?.elements||[])){
-      if(!e?.visible||!(e.type==='image'||e.type==='mask')||!e.src||!isAnimatedGifElement(e))continue;
+    const jobs=(board?.elements||[]).filter(e=>e?.visible&&(e.type==='image'||e.type==='mask')&&e.src&&isAnimatedGifElement(e)).map(async e=>{
       try{const gif=await decodeAnimatedGifAsset(e);assets.set(e.id,gif);assets.gifDurations.push(gif.durationMs);assets.gifCleanups.push(gif.cleanup);}catch(err){console.warn('FORMA GIF export fallback:',err);try{assets.set(e.id,await loadImage(e.src));}catch{}}
-    }
+    });
+    await Promise.all(jobs);
     return assets;
   }
   function cleanupBoardVideoAssets(assets){for(const cleanup of (assets?.gifCleanups||[])){try{cleanup();}catch{}}if(assets?.gifCleanups)assets.gifCleanups.length=0;}
