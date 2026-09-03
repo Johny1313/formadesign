@@ -47,7 +47,7 @@ function relevancy(query,item){
 
 const FIXED_IMAGE_HOSTS=new Set([
   'upload.wikimedia.org','images.pexels.com','images.unsplash.com','basefp.s3.us-east-1.amazonaws.com',
-  'live.staticflickr.com','cdn.loc.gov','images.metmuseum.org'
+  'live.staticflickr.com','cdn.loc.gov','images.metmuseum.org','imagens.ebc.com.br','agenciabrasil.ebc.com.br'
 ]);
 const IMAGE_HOST_SUFFIXES=['.ebc.com.br','.agenciabrasil.ebc.com.br','.staticflickr.com','.si.edu','.loc.gov','.wikimedia.org','.wordpress.com'];
 function safeImageTarget(value){
@@ -61,17 +61,22 @@ function safeImageTarget(value){
 }
 function proxyFor(value){const safe=safeImageTarget(value);return safe?`/api/free-images/file?url=${encodeURIComponent(safe.toString())}`:'';}
 function resultBase(input){
-  const proxyUrl=proxyFor(input.url||input.originalUrl);
+  const thumbnailUrl=String(input.thumbnailUrl||input.thumbUrl||input.url||input.originalUrl||'');
+  const assetUrl=String(input.assetUrl||input.originalUrl||input.url||thumbnailUrl||'');
+  const thumbnailProxyUrl=proxyFor(thumbnailUrl);
+  const assetProxyUrl=proxyFor(assetUrl);
+  const proxyUrl=assetProxyUrl||thumbnailProxyUrl;
   return {
     id:String(input.id||input.pageUrl||input.url||crypto.randomUUID()),
     title:clean(input.title||'Imagem',240),description:clean(input.description||'',600),
-    url:String(input.url||input.originalUrl||''),originalUrl:String(input.originalUrl||input.url||''),proxyUrl,
+    url:String(input.url||thumbnailUrl||assetUrl||''),originalUrl:String(input.originalUrl||assetUrl||thumbnailUrl||''),proxyUrl,
+    thumbnailUrl,thumbnailProxyUrl,assetUrl,assetProxyUrl,
     pageUrl:String(input.pageUrl||''),source:String(input.source||''),provider:String(input.provider||''),origin:'free-bank',
     author:clean(input.author||'',220),credit:clean(input.credit||input.author||'',300),
     attribution:clean(input.attribution||[input.credit||input.author,input.source].filter(Boolean).join(' · '),500),
     license:clean(input.license||'',180),licenseUrl:String(input.licenseUrl||''),usage:clean(input.usage||'',220),
     rightsStatus:input.rightsStatus||'review',reviewBeforeUse:input.reviewBeforeUse!==false,
-    autoUseAllowed:!!input.autoUseAllowed,insertable:!!proxyUrl,
+    autoUseAllowed:!!input.autoUseAllowed,insertable:!!(assetProxyUrl||thumbnailProxyUrl),
     factual:!!input.factual,score:Number(input.score)||0,downloadLocation:input.downloadLocation||''
   };
 }
@@ -79,7 +84,7 @@ function resultBase(input){
 async function fetchText(url,options={}){
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),Math.max(1500,Number(options.timeout)||6500));
   try{
-    const res=await fetch(url,{headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'FORMA-DESIGN/0.9.7.5.45 editorial-image-search',...(options.headers||{})},redirect:'follow',signal:controller.signal});
+    const res=await fetch(url,{headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'FORMA-DESIGN/0.9.7.5.46 editorial-image-search',...(options.headers||{})},redirect:'follow',signal:controller.signal});
     if(!res.ok)throw new Error(`HTTP ${res.status}`);return await res.text();
   }finally{clearTimeout(timer);}
 }
@@ -95,7 +100,7 @@ function extractLinkedCards(html,{base,hrefPattern,source,provider,factual=false
     const text=clean(surrounding,700);
     const creditMatch=text.match(/(?:Foto\s*:\s*)?([^|]{2,90}(?:Ag[eê]ncia Brasil|EBC|Fotos P[uú]blicas|\/PR|Stuckert|Pozzebom|Camargo|Pinto|R[eê]go|Fraz[aã]o))/i);
     const credit=clean(creditMatch?.[1]||'',180);
-    results.push(resultBase({id:href,title,description:text,url:image,originalUrl:image,pageUrl:href,source,provider,credit,attribution:[credit,source].filter(Boolean).join(' · '),license,usage,rightsStatus,reviewBeforeUse:true,autoUseAllowed:false,factual}));
+    results.push(resultBase({id:href,title,description:text,url:image,thumbnailUrl:image,assetUrl:image,originalUrl:image,pageUrl:href,source,provider,credit,attribution:[credit,source].filter(Boolean).join(' · '),license,usage,rightsStatus,reviewBeforeUse:true,autoUseAllowed:false,factual}));
   }
   return dedupe(results).slice(0,max);
 }
@@ -136,25 +141,25 @@ function metaValue(meta,key){return clean(meta?.[key]?.value||'',1400);}
 function acceptedCommonsLicense(value){const license=String(value||'').toLowerCase();return license.includes('cc0')||license.includes('public domain')||license.includes('domínio público')||license.includes('cc by')||license.includes('cc-by')||license.includes('creative commons attribution');}
 async function commonsSearch(query,limit=10){
   const qs=new URLSearchParams({action:'query',format:'json',formatversion:'2',origin:'*',generator:'search',gsrsearch:query,gsrnamespace:'6',gsrlimit:String(clampLimit(limit,10)),prop:'imageinfo',iiprop:'url|mime|extmetadata',iiurlwidth:'1000'});
-  const response=await fetch(`${COMMONS_API}?${qs}`,{headers:{Accept:'application/json','Api-User-Agent':'FormaOne/0.9.7.5.45 editorial free image search'}});if(!response.ok)throw new Error(`Wikimedia Commons HTTP ${response.status}`);
+  const response=await fetch(`${COMMONS_API}?${qs}`,{headers:{Accept:'application/json','Api-User-Agent':'FormaOne/0.9.7.5.46 editorial free image search'}});if(!response.ok)throw new Error(`Wikimedia Commons HTTP ${response.status}`);
   const data=await response.json(),pages=Array.isArray(data?.query?.pages)?data.query.pages:[],results=[];
-  for(const page of pages){const info=page?.imageinfo?.[0];if(!info||!/^image\/(jpeg|png|webp)$/i.test(String(info.mime||'')))continue;const meta=info.extmetadata||{};const license=clean(metaValue(meta,'LicenseShortName')||metaValue(meta,'UsageTerms')||'Licença não informada',140);if(!acceptedCommonsLicense(license))continue;const original=safeImageTarget(info.url),thumb=safeImageTarget(info.thumburl||info.url);if(!original||!thumb)continue;const artist=metaValue(meta,'Artist')||metaValue(meta,'Credit');const credit=metaValue(meta,'Credit');const pageUrl=`https://commons.wikimedia.org/wiki/${encodeURIComponent(String(page.title||'').replace(/ /g,'_'))}`;const item=resultBase({id:page.pageid||page.title,title:String(page.title||'').replace(/^File:/i,''),description:metaValue(meta,'ImageDescription'),url:thumb.toString(),originalUrl:original.toString(),pageUrl,source:'Wikimedia Commons',provider:'wikimedia',author:artist,credit,attribution:[artist||credit,license].filter(Boolean).join(' · '),license,licenseUrl:metaValue(meta,'LicenseUrl'),rightsStatus:'open-license',reviewBeforeUse:true,autoUseAllowed:true});item.score=70+relevancy(query,item);results.push(item);}
+  for(const page of pages){const info=page?.imageinfo?.[0];if(!info||!/^image\/(jpeg|png|webp)$/i.test(String(info.mime||'')))continue;const meta=info.extmetadata||{};const license=clean(metaValue(meta,'LicenseShortName')||metaValue(meta,'UsageTerms')||'Licença não informada',140);if(!acceptedCommonsLicense(license))continue;const original=safeImageTarget(info.url),thumb=safeImageTarget(info.thumburl||info.url);if(!original||!thumb)continue;const artist=metaValue(meta,'Artist')||metaValue(meta,'Credit');const credit=metaValue(meta,'Credit');const pageUrl=`https://commons.wikimedia.org/wiki/${encodeURIComponent(String(page.title||'').replace(/ /g,'_'))}`;const item=resultBase({id:page.pageid||page.title,title:String(page.title||'').replace(/^File:/i,''),description:metaValue(meta,'ImageDescription'),url:thumb.toString(),thumbnailUrl:thumb.toString(),assetUrl:original.toString(),originalUrl:original.toString(),pageUrl,source:'Wikimedia Commons',provider:'wikimedia',author:artist,credit,attribution:[artist||credit,license].filter(Boolean).join(' · '),license,licenseUrl:metaValue(meta,'LicenseUrl'),rightsStatus:'open-license',reviewBeforeUse:true,autoUseAllowed:true});item.score=70+relevancy(query,item);results.push(item);}
   return results;
 }
 
 function openverseAcceptedLicense(license){return ['cc0','pdm','by','by-sa'].includes(String(license||'').toLowerCase());}
 async function openverseSearch(query,limit=10){
   const qs=new URLSearchParams({q:query,page_size:String(clampLimit(limit,10)),mature:'false'});const res=await fetch(`${OPENVERSE_API}?${qs}`,{headers:{Accept:'application/json'}});if(!res.ok)throw new Error(`Openverse HTTP ${res.status}`);const data=await res.json();const results=[];
-  for(const raw of (data?.results||[])){if(!openverseAcceptedLicense(raw.license))continue;const image=raw.thumbnail||raw.url;if(!image)continue;const license=[String(raw.license||'').toUpperCase(),raw.license_version].filter(Boolean).join(' ');const item=resultBase({id:raw.id,title:raw.title||'Openverse',url:image,originalUrl:raw.url||image,pageUrl:raw.foreign_landing_url||raw.detail_url||'',source:'Openverse',provider:'openverse',author:raw.creator||'',credit:raw.creator||'',attribution:[raw.creator,license].filter(Boolean).join(' · '),license,licenseUrl:raw.license_url||'',rightsStatus:'open-license',reviewBeforeUse:true,autoUseAllowed:true});item.score=80+relevancy(query,item);results.push(item);}
+  for(const raw of (data?.results||[])){if(!openverseAcceptedLicense(raw.license))continue;const image=raw.thumbnail||raw.url;if(!image)continue;const license=[String(raw.license||'').toUpperCase(),raw.license_version].filter(Boolean).join(' ');const item=resultBase({id:raw.id,title:raw.title||'Openverse',url:image,thumbnailUrl:image,assetUrl:raw.url||image,originalUrl:raw.url||image,pageUrl:raw.foreign_landing_url||raw.detail_url||'',source:'Openverse',provider:'openverse',author:raw.creator||'',credit:raw.creator||'',attribution:[raw.creator,license].filter(Boolean).join(' · '),license,licenseUrl:raw.license_url||'',rightsStatus:'open-license',reviewBeforeUse:true,autoUseAllowed:true});item.score=80+relevancy(query,item);results.push(item);}
   return results.slice(0,limit);
 }
 
 async function pexelsSearch(query,limit,env){
-  const key=String(env?.PEXELS_API_KEY||'').trim();if(!key)return[];const qs=new URLSearchParams({query,per_page:String(clampLimit(limit,10)),locale:'pt-BR'});const res=await fetch(`https://api.pexels.com/v1/search?${qs}`,{headers:{Authorization:key,Accept:'application/json'}});if(!res.ok)throw new Error(`Pexels HTTP ${res.status}`);const data=await res.json();return (data?.photos||[]).map(photo=>{const item=resultBase({id:photo.id,title:photo.alt||'Pexels',url:photo.src?.large||photo.src?.medium,originalUrl:photo.src?.original||photo.src?.large,pageUrl:photo.url,source:'Pexels',provider:'pexels',author:photo.photographer,credit:photo.photographer,attribution:`${photo.photographer||'Fotógrafo'} · Pexels`,license:'Pexels License',licenseUrl:'https://www.pexels.com/license/',rightsStatus:'stock-license',reviewBeforeUse:true,autoUseAllowed:true});item.score=58+relevancy(query,item);return item;}).slice(0,limit);
+  const key=String(env?.PEXELS_API_KEY||'').trim();if(!key)return[];const qs=new URLSearchParams({query,per_page:String(clampLimit(limit,10)),locale:'pt-BR'});const res=await fetch(`https://api.pexels.com/v1/search?${qs}`,{headers:{Authorization:key,Accept:'application/json'}});if(!res.ok)throw new Error(`Pexels HTTP ${res.status}`);const data=await res.json();return (data?.photos||[]).map(photo=>{const item=resultBase({id:photo.id,title:photo.alt||'Pexels',url:photo.src?.large||photo.src?.medium,thumbnailUrl:photo.src?.medium||photo.src?.large,assetUrl:photo.src?.original||photo.src?.large,originalUrl:photo.src?.original||photo.src?.large,pageUrl:photo.url,source:'Pexels',provider:'pexels',author:photo.photographer,credit:photo.photographer,attribution:`${photo.photographer||'Fotógrafo'} · Pexels`,license:'Pexels License',licenseUrl:'https://www.pexels.com/license/',rightsStatus:'stock-license',reviewBeforeUse:true,autoUseAllowed:true});item.score=58+relevancy(query,item);return item;}).slice(0,limit);
 }
 
 async function unsplashSearch(query,limit,env){
-  const key=String(env?.UNSPLASH_ACCESS_KEY||'').trim();if(!key)return[];const qs=new URLSearchParams({query,per_page:String(clampLimit(limit,10)),content_filter:'high'});const res=await fetch(`https://api.unsplash.com/search/photos?${qs}`,{headers:{Authorization:`Client-ID ${key}`,Accept:'application/json','Accept-Version':'v1'}});if(!res.ok)throw new Error(`Unsplash HTTP ${res.status}`);const data=await res.json();return (data?.results||[]).map(photo=>{const author=photo.user?.name||photo.user?.username||'';const item=resultBase({id:photo.id,title:photo.alt_description||photo.description||'Unsplash',url:photo.urls?.regular||photo.urls?.small,originalUrl:photo.urls?.full||photo.urls?.regular,pageUrl:photo.links?.html,source:'Unsplash',provider:'unsplash',author,credit:author,attribution:`${author||'Fotógrafo'} · Unsplash`,license:'Unsplash License',licenseUrl:'https://unsplash.com/license',rightsStatus:'stock-license',reviewBeforeUse:true,autoUseAllowed:true,downloadLocation:photo.links?.download_location||''});item.score=54+relevancy(query,item);return item;}).slice(0,limit);
+  const key=String(env?.UNSPLASH_ACCESS_KEY||'').trim();if(!key)return[];const qs=new URLSearchParams({query,per_page:String(clampLimit(limit,10)),content_filter:'high'});const res=await fetch(`https://api.unsplash.com/search/photos?${qs}`,{headers:{Authorization:`Client-ID ${key}`,Accept:'application/json','Accept-Version':'v1'}});if(!res.ok)throw new Error(`Unsplash HTTP ${res.status}`);const data=await res.json();return (data?.results||[]).map(photo=>{const author=photo.user?.name||photo.user?.username||'';const item=resultBase({id:photo.id,title:photo.alt_description||photo.description||'Unsplash',url:photo.urls?.regular||photo.urls?.small,thumbnailUrl:photo.urls?.small||photo.urls?.regular,assetUrl:photo.urls?.full||photo.urls?.regular,originalUrl:photo.urls?.full||photo.urls?.regular,pageUrl:photo.links?.html,source:'Unsplash',provider:'unsplash',author,credit:author,attribution:`${author||'Fotógrafo'} · Unsplash`,license:'Unsplash License',licenseUrl:'https://unsplash.com/license',rightsStatus:'stock-license',reviewBeforeUse:true,autoUseAllowed:true,downloadLocation:photo.links?.download_location||''});item.score=54+relevancy(query,item);return item;}).slice(0,limit);
 }
 
 function desiredProviders(url,env){
@@ -175,9 +180,21 @@ async function unifiedSearch(query,limit,providers,env){
   const ranked=dedupe(items).sort((a,b)=>(b.score||0)-(a.score||0));return {results:ranked.slice(0,limit),statuses};
 }
 
+function inferredImageType(url,type=''){
+  const raw=String(type||'').toLowerCase().split(';')[0].trim();
+  if(/^image\/(jpeg|jpg|png|webp|avif|gif)$/i.test(raw))return raw==='image/jpg'?'image/jpeg':raw;
+  const path=String(url?.pathname||'').toLowerCase();
+  if(path.endsWith('.jpg')||path.endsWith('.jpeg'))return 'image/jpeg';
+  if(path.endsWith('.png'))return 'image/png';
+  if(path.endsWith('.webp'))return 'image/webp';
+  if(path.endsWith('.avif'))return 'image/avif';
+  if(path.endsWith('.gif'))return 'image/gif';
+  return '';
+}
+
 async function proxyImage(request){
   const url=new URL(request.url),target=safeImageTarget(url.searchParams.get('url'));if(!target)return json({ok:false,error:'Imagem não permitida pelo proxy seguro'},400);
-  const response=await fetch(target.toString(),{headers:{Accept:'image/avif,image/webp,image/png,image/jpeg,*/*;q=0.5','User-Agent':'FORMA-DESIGN/0.9.7.5.45 editorial image proxy'}});if(!response.ok)return json({ok:false,error:`Imagem indisponível: HTTP ${response.status}`},502);const type=String(response.headers.get('content-type')||'').toLowerCase();if(!/^image\/(jpeg|png|webp|avif)/i.test(type))return json({ok:false,error:'Formato de imagem não permitido'},415);return new Response(response.body,{status:200,headers:{'Content-Type':type,'Cache-Control':'public, max-age=21600','X-Content-Type-Options':'nosniff','Access-Control-Allow-Origin':'*'}});
+  const response=await fetch(target.toString(),{headers:{Accept:'image/avif,image/webp,image/png,image/jpeg,image/jpg,image/gif,image/*;q=0.8,*/*;q=0.2','User-Agent':'FORMA-DESIGN/0.9.7.5.46 editorial image proxy'}});if(!response.ok)return json({ok:false,error:`Imagem indisponível: HTTP ${response.status}`},502);const type=inferredImageType(target,response.headers.get('content-type')||'');if(!type)return json({ok:false,error:'Formato de imagem não permitido'},415);return new Response(response.body,{status:200,headers:{'Content-Type':type,'Cache-Control':'public, max-age=21600','X-Content-Type-Options':'nosniff','Access-Control-Allow-Origin':'*'}});
 }
 
 async function trackUnsplash(request,env){

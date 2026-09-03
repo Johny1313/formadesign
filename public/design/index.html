@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FORMA DESIGN 0.9.7.5.45</title>
+  <title>FORMA DESIGN 0.9.7.5.46</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=Lato:wght@300;400;700;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Nunito:wght@300;400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@
       <div class="brand-wrap">
         <div class="brand-mark">F</div>
         <div>
-          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.45</b></div>
+          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.46</b></div>
           <div class="brand-sub">Editor visual de design, conteúdo e gráficos</div>
         </div>
       </div>
@@ -2581,7 +2581,7 @@
     return {
       contractVersion:'ronda-one-production-v2',
       source:'forma-direct-article',
-      sourceVersion:'0.9.7.5.45',
+      sourceVersion:'0.9.7.5.46',
       title,
       editoria:data?.editoria||'Notícias',
       slides:(data?.slides||[]).map((slide,index)=>({...slide,number:Number(slide.number)||index+1})),
@@ -3245,27 +3245,52 @@
     return String(value||'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   }
 
+  function freeBankPreviewSrc(item){
+    return item?.thumbnailProxyUrl||item?.proxyUrl||item?.thumbnailUrl||item?.url||item?.assetProxyUrl||item?.assetUrl||item?.originalUrl||'';
+  }
+
+  function freeBankInsertSources(item){
+    return [item?.assetProxyUrl,item?.proxyUrl,item?.thumbnailProxyUrl,item?.assetUrl,item?.originalUrl,item?.url,item?.thumbnailUrl]
+      .map(value=>String(value||'').trim())
+      .filter((value,index,list)=>value&&list.indexOf(value)===index);
+  }
+
+  async function freeBankFetchImageDataUrl(candidates){
+    let lastError=null;
+    for(const src of candidates){
+      try{
+        const response=await fetch(src,{cache:'force-cache'});
+        if(!response.ok)throw new Error('Imagem indisponível');
+        const blob=await response.blob();
+        if(!String(blob.type||'').toLowerCase().startsWith('image/'))throw new Error('Formato inválido');
+        const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});
+        return dataUrl;
+      }catch(error){lastError=error;}
+    }
+    throw lastError||new Error('Imagem indisponível');
+  }
+
   async function freeBankTrackUse(item){
     if(item?.provider!=='unsplash'||!item.downloadLocation)return;
     try{await fetch('/api/free-images/track/unsplash',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({downloadLocation:item.downloadLocation})});}catch{}
   }
 
   async function freeBankUse(item){
-    if(item?.insertable===false||!(item?.proxyUrl||item?.url)){
+    const sources=freeBankInsertSources(item);
+    if(item?.insertable===false||!sources.length){
       if(item?.pageUrl){window.open(item.pageUrl,'_blank','noopener,noreferrer');showToast('Abra a fonte para baixar ou conferir esta imagem');}
       else showToast('Esta fonte não permite inserção direta');
       return;
     }
     try{
-      const src=item.proxyUrl||item.url;
-      const response=await fetch(src,{cache:'force-cache'});
-      if(!response.ok)throw new Error('Imagem indisponível');
-      const blob=await response.blob();
-      const dataUrl=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});
+      const dataUrl=await freeBankFetchImageDataUrl(sources);
       const size=await imageNaturalSize(dataUrl);const ratio=(size?.w||1200)/(size?.h||800);const maxW=state.width*.74,maxH=state.height*.74;let w=maxW,h=w/ratio;if(h>maxH){h=maxH;w=h*ratio;}
-      state.elements.push({id:uid(),type:'image',name:item.title||item.source||'Imagem editorial',x:(state.width-w)/2,y:(state.height-h)/2,w,h,rotation:0,opacity:100,locked:false,visible:true,src:dataUrl,sourceWidth:size?.w||1200,sourceHeight:size?.h||800,objectFit:'cover',sourceOrigin:item.provider||'free-bank',sourceUrl:item.pageUrl||item.originalUrl||item.url||'',sourceCredit:item.attribution||item.credit||item.author||'',sourceLicense:item.license||'',sourceLicenseUrl:item.licenseUrl||'',sourceUsage:item.usage||'',sourceRightsStatus:item.rightsStatus||'review'});
+      state.elements.push({id:uid(),type:'image',name:item.title||item.source||'Imagem editorial',x:(state.width-w)/2,y:(state.height-h)/2,w,h,rotation:0,opacity:100,locked:false,visible:true,src:dataUrl,sourceWidth:size?.w||1200,sourceHeight:size?.h||800,objectFit:'cover',sourceOrigin:item.provider||'free-bank',sourceUrl:item.pageUrl||item.assetUrl||item.originalUrl||item.url||'',sourceCredit:item.attribution||item.credit||item.author||'',sourceLicense:item.license||'',sourceLicenseUrl:item.licenseUrl||'',sourceUsage:item.usage||'',sourceRightsStatus:item.rightsStatus||'review'});
       state.selectedId=state.elements.at(-1).id;state.selectedIds=[state.selectedId];pushHistory();renderAll();markDirty();freeBankTrackUse(item);showToast(`Imagem inserida · ${item.source||'fonte preservada'}`);
-    }catch{showToast('Não foi possível inserir esta imagem. Abra a fonte original.');}
+    }catch{
+      if(item?.pageUrl)window.open(item.pageUrl,'_blank','noopener,noreferrer');
+      showToast('Não foi possível inserir esta imagem. Abra a fonte original.');
+    }
   }
 
   function freeBankProviderBadge(item){
@@ -3281,16 +3306,19 @@
     if(!results?.length){status.textContent='Nenhuma imagem adequada encontrada. Você pode tentar outro termo ou usar a IA como fallback.';return;}
     status.textContent=`${results.length} resultados · ordenados por relevância editorial.`;
     results.forEach(item=>{
-      const card=document.createElement('div');card.style.cssText='border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden';const preview=item.proxyUrl||item.url||'';const canUse=item.insertable!==false&&!!preview;
-      card.innerHTML=`
-        <img src="${freeBankEscape(preview)}" alt="${freeBankEscape(item.title)}" loading="lazy" style="width:100%;aspect-ratio:1.25;object-fit:cover;display:block;background:#eee">
-        <div style="padding:7px;display:grid;gap:5px">
+      const card=document.createElement('div');card.style.cssText='border:1px solid var(--line);border-radius:10px;background:#fff;overflow:hidden';const preview=freeBankPreviewSrc(item);const canUse=item.insertable!==false&&freeBankInsertSources(item).length>0;
+      const media=document.createElement('div');media.style.cssText='width:100%;aspect-ratio:1.25;background:#f0efe9;position:relative;overflow:hidden';
+      const img=document.createElement('img');img.alt=item.title||'Imagem';img.loading='lazy';img.referrerPolicy='no-referrer';img.style.cssText='width:100%;height:100%;object-fit:cover;display:block;background:#eee';
+      const placeholder=document.createElement('div');placeholder.style.cssText='position:absolute;inset:0;display:none;place-items:center;padding:10px;text-align:center;font-size:9px;line-height:1.35;color:var(--muted);background:#f5f4ef';placeholder.textContent='Miniatura indisponível nesta fonte';
+      if(preview){img.src=preview;img.onerror=()=>{img.style.display='none';placeholder.style.display='grid';};media.append(img,placeholder);}else{placeholder.style.display='grid';media.append(placeholder);}      
+      const body=document.createElement('div');body.style.cssText='padding:7px;display:grid;gap:5px';
+      body.innerHTML=`
           <div style="display:flex;gap:4px;flex-wrap:wrap"><span style="font-size:7px;font-weight:800;border:1px solid var(--line);border-radius:999px;padding:2px 5px">${freeBankEscape(item.source||'Fonte')}</span><span style="font-size:7px;color:var(--muted)">${freeBankEscape(freeBankProviderBadge(item))}</span></div>
           <strong style="font-size:9px;line-height:1.25">${freeBankEscape(item.title||'Imagem')}</strong>
           <span style="font-size:8px;color:var(--muted);line-height:1.3">${freeBankEscape(item.attribution||item.credit||item.license||'Crédito na fonte')}</span>
           ${item.usage?`<span style="font-size:7px;color:var(--muted);line-height:1.25">${freeBankEscape(item.usage)}</span>`:''}
-          <div style="display:flex;gap:5px"><button class="mini-btn use-btn" type="button">${canUse?'Usar':'Abrir fonte'}</button>${item.pageUrl?'<button class="mini-btn source-btn" type="button">Fonte</button>':''}</div>
-        </div>`;
+          <div style="display:flex;gap:5px"><button class="mini-btn use-btn" type="button">${canUse?'Usar':'Abrir fonte'}</button>${item.pageUrl?'<button class="mini-btn source-btn" type="button">Fonte</button>':''}</div>`;
+      card.append(media,body);
       card.querySelector('.use-btn').onclick=()=>freeBankUse(item);const sourceBtn=card.querySelector('.source-btn');if(sourceBtn)sourceBtn.onclick=()=>window.open(item.pageUrl,'_blank','noopener,noreferrer');host.appendChild(card);
     });
   }
