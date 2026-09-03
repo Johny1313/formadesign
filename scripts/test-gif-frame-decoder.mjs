@@ -13,7 +13,7 @@ const checks = [
   ['Board element renderer receives elapsed time', /function drawPreparedBoardElement\(ctx,e,asset,chartCanvas,elapsedMs=0\)/],
   ['Image rendering resolves animated frame', /const drawableAsset=isAnimatedGifElement\(e\)\?gifFrameForElapsed\(asset,elapsedMs\):asset/],
   ['Mask rendering uses animated frame', /if\(drawableAsset\)drawMaskedImage\(ctx,drawableAsset,e\)/],
-  ['Board video passes elapsed time into media renderer', /drawPreparedBoardElement\(ctx,e,assets\.get\(e\.id\),chartCanvas,elapsedMs\)/],
+  ['Board video passes elapsed time into media renderer', /drawBoardElementLayerMasked\(ctx,board,index,assets,chartRenderers,elapsedMs\)/],
   ['GIF frame resources are cleaned', /frame\.bitmap\.close\(\)/]
 ];
 let failed = 0;

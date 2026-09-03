@@ -5,7 +5,7 @@ const checks = [
   ['Board video preloads media assets', /async function preloadBoardVideoAssets\(board\)/],
   ['Board video uses per-frame compositor', /function drawBoardVideoFrame\(ctx,board,assets,chartRenderers,elapsedMs\)/],
   ['Each video frame clears prior pixels', /ctx\.clearRect\(0,0,ctx\.canvas\.width,ctx\.canvas\.height\)/],
-  ['Layer order is rebuilt every frame', /for\(const e of \(board\?\.elements\|\|\[\]\)\)\{[\s\S]*drawPreparedBoardElement\(ctx,e,assets\.get\(e\.id\),chartCanvas(?:,elapsedMs)?\)/],
+  ['Layer order is rebuilt every frame', /for\(let index=0;index<\(board\?\.elements\|\|\[\]\)\.length;index\+\+\)drawBoardElementLayerMasked\(ctx,board,index,assets,chartRenderers,elapsedMs\)/],
   ['Chart video renderers are prepared per chart element', /async function createBoardChartVideoRenderers\(board\)/],
   ['Board export reads exact chart animation duration', /durationMs:Math\.max\(0,Number\(meta\?\.durationMs\)\|\|0\)/],
   ['Board duration follows chart completion when charts are animated', /const animatedDurations=\[\.\.\.chartRenderers\.values\(\)\]\.filter\(item=>item\.animated\)\.map\(item=>item\.durationMs\)\.filter\(v=>v>0\);const gifDurations=\[\.\.\.\(assets\.gifDurations\|\|\[\]\)\]\.filter\(v=>v>0\);const durationMs=animatedDurations\.length\?Math\.max\(\.\.\.animatedDurations\):\(gifDurations\.length\?Math\.max\(\.\.\.gifDurations\):1000\);/],

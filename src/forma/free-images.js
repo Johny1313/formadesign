@@ -94,7 +94,7 @@ function resultBase(input){
 async function fetchText(url,options={}){
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),Math.max(1500,Number(options.timeout)||6500));
   try{
-    const res=await fetch(url,{headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'FORMA-DESIGN/0.9.7.5.47 editorial-image-search',...(options.headers||{})},redirect:'follow',signal:controller.signal});
+    const res=await fetch(url,{headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'FORMA-DESIGN/0.9.7.5.48 editorial-image-search',...(options.headers||{})},redirect:'follow',signal:controller.signal});
     if(!res.ok)throw new Error(`HTTP ${res.status}`);return await res.text();
   }finally{clearTimeout(timer);}
 }
@@ -151,7 +151,7 @@ function metaValue(meta,key){return clean(meta?.[key]?.value||'',1400);}
 function acceptedCommonsLicense(value){const license=String(value||'').toLowerCase();return license.includes('cc0')||license.includes('public domain')||license.includes('domínio público')||license.includes('cc by')||license.includes('cc-by')||license.includes('creative commons attribution');}
 async function commonsSearch(query,limit=10){
   const qs=new URLSearchParams({action:'query',format:'json',formatversion:'2',origin:'*',generator:'search',gsrsearch:query,gsrnamespace:'6',gsrlimit:String(clampLimit(limit,10)),prop:'imageinfo',iiprop:'url|mime|extmetadata',iiurlwidth:'1000'});
-  const response=await fetch(`${COMMONS_API}?${qs}`,{headers:{Accept:'application/json','Api-User-Agent':'FormaOne/0.9.7.5.47 editorial free image search'}});if(!response.ok)throw new Error(`Wikimedia Commons HTTP ${response.status}`);
+  const response=await fetch(`${COMMONS_API}?${qs}`,{headers:{Accept:'application/json','Api-User-Agent':'FormaOne/0.9.7.5.48 editorial free image search'}});if(!response.ok)throw new Error(`Wikimedia Commons HTTP ${response.status}`);
   const data=await response.json(),pages=Array.isArray(data?.query?.pages)?data.query.pages:[],results=[];
   for(const page of pages){const info=page?.imageinfo?.[0];if(!info||!/^image\/(jpeg|png|webp)$/i.test(String(info.mime||'')))continue;const meta=info.extmetadata||{};const license=clean(metaValue(meta,'LicenseShortName')||metaValue(meta,'UsageTerms')||'Licença não informada',140);if(!acceptedCommonsLicense(license))continue;const original=safeImageTarget(info.url),thumb=safeImageTarget(info.thumburl||info.url);if(!original||!thumb)continue;const artist=metaValue(meta,'Artist')||metaValue(meta,'Credit');const credit=metaValue(meta,'Credit');const pageUrl=`https://commons.wikimedia.org/wiki/${encodeURIComponent(String(page.title||'').replace(/ /g,'_'))}`;const item=resultBase({id:page.pageid||page.title,title:String(page.title||'').replace(/^File:/i,''),description:metaValue(meta,'ImageDescription'),url:thumb.toString(),thumbnailUrl:thumb.toString(),assetUrl:original.toString(),originalUrl:original.toString(),pageUrl,source:'Wikimedia Commons',provider:'wikimedia',author:artist,credit,attribution:[artist||credit,license].filter(Boolean).join(' · '),license,licenseUrl:metaValue(meta,'LicenseUrl'),rightsStatus:'open-license',reviewBeforeUse:true,autoUseAllowed:true});item.score=70+relevancy(query,item);results.push(item);}
   return results;
@@ -248,7 +248,7 @@ function inferredImageType(url,type=''){
 
 async function proxyImage(request){
   const url=new URL(request.url),target=safeImageTarget(url.searchParams.get('url'));if(!target)return json({ok:false,error:'Imagem não permitida pelo proxy seguro'},400);
-  const response=await fetch(target.toString(),{headers:{Accept:'image/avif,image/webp,image/png,image/jpeg,image/jpg,image/gif,image/*;q=0.8,*/*;q=0.2','User-Agent':'FORMA-DESIGN/0.9.7.5.47 editorial image proxy'}});if(!response.ok)return json({ok:false,error:`Imagem indisponível: HTTP ${response.status}`},502);const type=inferredImageType(target,response.headers.get('content-type')||'');if(!type)return json({ok:false,error:'Formato de imagem não permitido'},415);return new Response(response.body,{status:200,headers:{'Content-Type':type,'Cache-Control':'public, max-age=21600','X-Content-Type-Options':'nosniff','Access-Control-Allow-Origin':'*'}});
+  const response=await fetch(target.toString(),{headers:{Accept:'image/avif,image/webp,image/png,image/jpeg,image/jpg,image/gif,image/*;q=0.8,*/*;q=0.2','User-Agent':'FORMA-DESIGN/0.9.7.5.48 editorial image proxy'}});if(!response.ok)return json({ok:false,error:`Imagem indisponível: HTTP ${response.status}`},502);const type=inferredImageType(target,response.headers.get('content-type')||'');if(!type)return json({ok:false,error:'Formato de imagem não permitido'},415);return new Response(response.body,{status:200,headers:{'Content-Type':type,'Cache-Control':'public, max-age=21600','X-Content-Type-Options':'nosniff','Access-Control-Allow-Origin':'*'}});
 }
 
 async function trackUnsplash(request,env){
