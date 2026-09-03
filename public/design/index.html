@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FORMA DESIGN 0.9.7.5.37</title>
+  <title>FORMA DESIGN 0.9.7.5.38</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@300;400;500;600;700;800;900&family=Lato:wght@300;400;700;900&family=Montserrat:wght@300;400;500;600;700;800;900&family=Nunito:wght@300;400;500;600;700;800;900&family=Open+Sans:wght@300;400;500;600;700;800&family=Oswald:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700;800;900&family=Roboto:wght@300;400;500;700;900&display=swap" rel="stylesheet">
@@ -310,7 +310,7 @@
       <div class="brand-wrap">
         <div class="brand-mark">F</div>
         <div>
-          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.37</b></div>
+          <div class="brand">FORMA <span>DESIGN</span><b>0.9.7.5.38</b></div>
           <div class="brand-sub">Editor visual de design, conteúdo e gráficos</div>
         </div>
       </div>
@@ -1806,17 +1806,38 @@
   function snapPosition(e,x,y){
     if(!state.snapEnabled)return {x,y,guides:[]};const threshold=9/state.zoom;const xTargets=[0,state.width/2,state.width],yTargets=[0,state.height/2,state.height];state.elements.forEach(o=>{if(o.id===e.id||!o.visible)return;xTargets.push(o.x,o.x+o.w/2,o.x+o.w);yTargets.push(o.y,o.y+o.h/2,o.y+o.h);});const xAnchors=[{v:x,off:0},{v:x+e.w/2,off:e.w/2},{v:x+e.w,off:e.w}],yAnchors=[{v:y,off:0},{v:y+e.h/2,off:e.h/2},{v:y+e.h,off:e.h}];let bestX={d:Infinity},bestY={d:Infinity};xAnchors.forEach(a=>xTargets.forEach(t=>{const d=Math.abs(a.v-t);if(d<bestX.d&&d<=threshold)bestX={d,t,off:a.off};}));yAnchors.forEach(a=>yTargets.forEach(t=>{const d=Math.abs(a.v-t);if(d<bestY.d&&d<=threshold)bestY={d,t,off:a.off};}));const guides=[];if(bestX.d<Infinity){x=bestX.t-bestX.off;guides.push({axis:'x',pos:bestX.t});}if(bestY.d<Infinity){y=bestY.t-bestY.off;guides.push({axis:'y',pos:bestY.t});}return{x,y,guides};
   }
+  function isAltDragDuplicableElement(e){
+    if(!e||e.locked||isChartElement(e))return false;
+    return e.type==='text'||e.type==='image'||['rect','square','roundRect','circle','triangle','star','line'].includes(e.type);
+  }
+  function materializeAltDragDuplicate(){
+    if(!drag?.altDuplicate||drag.altDuplicated)return false;
+    const sourceIds=(drag.type==='groupMove'?drag.ids:[drag.id]).filter(Boolean);
+    const source=sourceIds.map(id=>state.elements.find(e=>e.id===id)).filter(Boolean);
+    if(!source.length||!source.every(isAltDragDuplicableElement)){drag.altDuplicate=false;return false;}
+    const copies=remapCopiedGroupIds(source.map(e=>{const c=clone(e);c.id=uid();c.name=String(e.name||'Elemento')+' cópia';return c;}));
+    const idMap=new Map(source.map((e,i)=>[e.id,copies[i].id]));
+    state.elements.push(...copies);
+    if(drag.type==='groupMove'){
+      drag.ids=copies.map(c=>c.id);
+      drag.id=idMap.get(drag.id)||copies[0].id;
+      drag.origins=Object.fromEntries(copies.map(c=>[c.id,{x:c.x,y:c.y}]));
+    }else{
+      const copy=copies[0];drag.id=copy.id;drag.orig=clone(copy);
+    }
+    state.selectedIds=copies.map(c=>c.id);state.selectedId=state.selectedIds[0]||null;state.editingTextId=null;state.maskEditingId=null;drag.altDuplicated=true;return true;
+  }
   function elementPointerDown(ev){
     if(ev.button===1){ev.stopPropagation();beginPan(ev,false);return;}if(ev.button!==0)return;
     ev.stopPropagation();if(state.editingTextId){const editing=state.editingTextId;if(editing!==ev.currentTarget.dataset.id){state.editingTextId=null;pushHistory();}else if(ev.target.dataset.textContent==='1')return;}
     const id=ev.currentTarget.dataset.id;const already=(state.selectedIds||[]).includes(id);if(!already||!(state.selectedIds||[]).length)selectElementOrGroup(id);const e=state.elements.find(x=>x.id===id);renderLayers();renderProperties();if(!e||e.locked){renderArtboard();return;}const resizeDir=ev.target.dataset.resize||null;
     if(state.maskEditingId===id&&e.type==='mask'&&e.src&&!resizeDir){drag={type:'maskImage',id,startX:ev.clientX,startY:ev.clientY,orig:clone(e),moved:false};}
-    else if(!resizeDir&&(state.selectedIds||[]).length>1){const ids=state.selectedIds.filter(sid=>state.elements.some(x=>x.id===sid&&!x.locked));drag={type:'groupMove',id,ids,startX:ev.clientX,startY:ev.clientY,origins:Object.fromEntries(ids.map(sid=>{const x=state.elements.find(z=>z.id===sid);return[sid,{x:x.x,y:x.y}]})),moved:false};}
-    else drag={type:resizeDir?'resize':'move',dir:resizeDir,id,startX:ev.clientX,startY:ev.clientY,orig:clone(e),moved:false,clickedText:!resizeDir&&e.type==='text'};
+    else if(!resizeDir&&(state.selectedIds||[]).length>1){const ids=state.selectedIds.filter(sid=>state.elements.some(x=>x.id===sid&&!x.locked));drag={type:'groupMove',id,ids,startX:ev.clientX,startY:ev.clientY,origins:Object.fromEntries(ids.map(sid=>{const x=state.elements.find(z=>z.id===sid);return[sid,{x:x.x,y:x.y}]})),moved:false,altDuplicate:!!ev.altKey,altDuplicated:false};}
+    else drag={type:resizeDir?'resize':'move',dir:resizeDir,id,startX:ev.clientX,startY:ev.clientY,orig:clone(e),moved:false,clickedText:!resizeDir&&e.type==='text',altDuplicate:!resizeDir&&!!ev.altKey,altDuplicated:false};
     window.addEventListener('pointermove',elementPointerMove);window.addEventListener('pointerup',elementPointerUp,{once:true});
   }
   function elementPointerMove(ev){
-    if(!drag)return;const e=state.elements.find(x=>x.id===drag.id);if(!e)return;const dx=(ev.clientX-drag.startX)/state.zoom,dy=(ev.clientY-drag.startY)/state.zoom;if(Math.abs(dx)>1||Math.abs(dy)>1)drag.moved=true;
+    if(!drag)return;const dx=(ev.clientX-drag.startX)/state.zoom,dy=(ev.clientY-drag.startY)/state.zoom;if(Math.abs(dx)>1||Math.abs(dy)>1){drag.moved=true;if(drag.altDuplicate&&!drag.altDuplicated)materializeAltDragDuplicate();}const e=state.elements.find(x=>x.id===drag.id);if(!e)return;
     if(drag.type==='groupMove'){for(const id of drag.ids){const el=state.elements.find(x=>x.id===id),o=drag.origins[id];if(!el||!o)continue;el.x=o.x+dx;el.y=o.y+dy;}}
     else if(drag.type==='maskImage'){e.imageX=clamp((drag.orig.imageX||0)+dx/(Math.max(1,e.w/2))*100,-200,200);e.imageY=clamp((drag.orig.imageY||0)+dy/(Math.max(1,e.h/2))*100,-200,200);}
     else if(drag.type==='move'){let x=drag.orig.x+dx,y=drag.orig.y+dy;const s=snapPosition(e,x,y);e.x=clamp(s.x,-e.w+20,state.width-20);e.y=clamp(s.y,-e.h+20,state.height-20);state.guides=s.guides;}
@@ -1906,6 +1927,9 @@
     }
     if(mod&&!typing&&key==='v'){
       ev.preventDefault();ev.stopPropagation();pasteClipboardToBoard();return;
+    }
+    if(mod&&!typing&&key==='j'){
+      ev.preventDefault();ev.stopPropagation();duplicateSelected();return;
     }
     if(mod&&!typing&&key==='g'){
       ev.preventDefault();ev.stopPropagation();if(ev.shiftKey)ungroupSelected();else groupSelected();return;
@@ -2539,7 +2563,7 @@
     return {
       contractVersion:'ronda-one-production-v2',
       source:'forma-direct-article',
-      sourceVersion:'0.9.7.5.37',
+      sourceVersion:'0.9.7.5.38',
       title,
       editoria:data?.editoria||'Notícias',
       slides:(data?.slides||[]).map((slide,index)=>({...slide,number:Number(slide.number)||index+1})),

@@ -39,7 +39,7 @@ button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-vis
 }
 .app{height:100vh;display:grid;grid-template-rows:66px 1fr;background:var(--bg)}
 
-/* Embedded only inside FORMA DESIGN 0.9.7.5.37 */
+/* Embedded only inside FORMA DESIGN 0.9.7.5.38 */
 body{background:#d8d6d1}
 .app{height:100vh;grid-template-rows:1fr}
 .topbar{display:none!important}
@@ -559,6 +559,10 @@ Colômbia,27</textarea>
 
       <div class="section">
         <div class="section-head"><strong>Rótulos e valores</strong><span class="hint">texto dos dados</span></div>
+        <div class="row">
+          <div class="field"><label>Nomes / categorias / séries (px)</label><input id="chartLabelFontSize" type="number" value="11" min="6" max="96" step="1"></div>
+          <div class="field"><label>Valores (px)</label><input id="chartValueFontSize" type="number" value="10" min="6" max="96" step="1"></div>
+        </div>
         <div class="switchline"><label>Ocultar valores</label><label class="switch"><input id="hideValues" type="checkbox"><span class="slider"></span></label></div>
         <div class="switchline"><label>Converter datas para padrão Brasil</label><label class="switch"><input id="formatDates" type="checkbox" checked><span class="slider"></span></label></div>
         <div class="field">
@@ -1498,6 +1502,14 @@ function getYAxisFontSize(){
   return clamp(+$('yAxisFontSize')?.value || 10, 6, 96);
 }
 
+function getChartLabelFontSize(){
+  return clamp(+$('chartLabelFontSize')?.value || 11, 6, 96);
+}
+
+function getChartValueFontSize(){
+  return clamp(+$('chartValueFontSize')?.value || 10, 6, 96);
+}
+
 function getXAxisLabelReserve(c, data){
   if(!$('showX').checked) return 0;
   const fontSize = getXAxisFontSize();
@@ -1580,7 +1592,8 @@ function updateLegendControlVisibility(){
 
 function getLegendItems(c, data){
   c.save();
-  c.font = '10px Inter, sans-serif';
+  const labelFontSize = getChartLabelFontSize();
+  c.font = `${labelFontSize}px Inter, sans-serif`;
   const items = data.map(d => ({
     label: String(d.label ?? ''),
     color: itemColor(d.idx),
@@ -1600,7 +1613,7 @@ function getLegendLines(c, data, availableWidth){
       mode: 'vertical',
       items,
       width,
-      lineHeight: 18
+      lineHeight: Math.max(18, getChartLabelFontSize() + 8)
     };
   }
 
@@ -1620,7 +1633,7 @@ function getLegendLines(c, data, availableWidth){
     mode: 'horizontal',
     lines,
     widths,
-    lineHeight: 18
+    lineHeight: Math.max(18, getChartLabelFontSize() + 8)
   };
 }
 
@@ -1653,7 +1666,8 @@ function drawLegend(c, data, w, h, pad){
   const layout = getLegendLines(c, data, availableWidth);
 
   c.save();
-  c.font = '10px Inter, sans-serif';
+  const legendFontSize = getChartLabelFontSize();
+  c.font = `${legendFontSize}px Inter, sans-serif`;
   c.textBaseline = 'middle';
 
   if(layout.mode === 'vertical'){
@@ -2388,7 +2402,9 @@ function drawBar(data, w, h, axis, hideValues, progress){
   const range = (axis.max - axis.min) || 1;
   const plotHeight = Math.max(40, h - pad.top - pad.bottom);
   const row = plotHeight / data.length;
-  const labelHeight = 12;
+  const labelFontSize = getChartLabelFontSize();
+  const valueFontSize = getChartValueFontSize();
+  const labelHeight = labelFontSize + 3;
 
   drawReferenceLinesForBar(data, w, h, pad, axis, row, labelHeight, gap);
 
@@ -2402,9 +2418,9 @@ function drawBar(data, w, h, axis, hideValues, progress){
     const barW = Math.max(2, usableWidth * ratio * progress);
 
     c.fillStyle = '#111827';
-    c.font = '600 11px Inter, sans-serif';
+    c.font = `600 ${labelFontSize}px Inter, sans-serif`;
     c.textAlign = 'left';
-    c.fillText(d.label, pad.left, rowTop + 10);
+    c.fillText(d.label, pad.left, rowTop + labelFontSize);
 
     c.fillStyle = '#e9edf3';
     roundedRect(c, pad.left, trackY, usableWidth, bh, radius);
@@ -2419,7 +2435,7 @@ function drawBar(data, w, h, axis, hideValues, progress){
 
     if(!hideValues && progress > 0.92){
       c.fillStyle = '#111827';
-      c.font = '700 11px Inter, sans-serif';
+      c.font = `700 ${valueFontSize}px Inter, sans-serif`;
       c.textAlign = 'left';
       c.fillText(fmt(d.rawValue), Math.min(pad.left + barW + 6, w - 34), trackY + bh / 2 + 4);
     }
@@ -2470,9 +2486,9 @@ function drawColumn(data, w, h, axis, hideValues, progress){
 
     if(!hideValues && progress > 0.92){
       c.fillStyle = '#111827';
-      c.font = '700 10px Inter, sans-serif';
+      c.font = `700 ${getChartValueFontSize()}px Inter, sans-serif`;
       c.textAlign = 'center';
-      c.fillText(fmt(d.rawValue), x + bw / 2, Math.max(10, y - 6));
+      c.fillText(fmt(d.rawValue), x + bw / 2, Math.max(getChartValueFontSize(), y - 6));
     }
 
     if($('showX').checked && shouldShowXLabel(d, i, data)){
@@ -2614,9 +2630,9 @@ function drawLine(data, w, h, axis, hideValues, fillArea, progress){
 
     if(!hideValues && !p.interpolated && progress > 0.92){
       c.fillStyle = '#111827';
-      c.font = '700 10px Inter, sans-serif';
+      c.font = `700 ${getChartValueFontSize()}px Inter, sans-serif`;
       c.textAlign = 'center';
-      c.fillText(fmt(p.d.rawValue), p.x, p.y - 11);
+      c.fillText(fmt(p.d.rawValue), p.x, p.y - Math.max(11, getChartValueFontSize()));
     }
 
     const originalIndex = data.findIndex(item => item.idx === p.d.idx);
@@ -2715,9 +2731,9 @@ function drawMultiSeriesLine(dataset, w, h, axis, hideValues, fillArea, progress
 
       if(!hideValues && !p.interpolated && progress > 0.92){
         c.fillStyle = seriesColor;
-        c.font = '700 10px Inter, sans-serif';
+        c.font = `700 ${getChartValueFontSize()}px Inter, sans-serif`;
         c.textAlign = 'center';
-        c.fillText(fmt(p.d.rawValue), p.x, p.y - 11);
+        c.fillText(fmt(p.d.rawValue), p.x, p.y - Math.max(11, getChartValueFontSize()));
       }
     });
   });
@@ -2737,7 +2753,9 @@ function drawMultiSeriesLine(dataset, w, h, axis, hideValues, fillArea, progress
 
 function drawLollipop(data, w, h, axis, hideValues, progress){
   const c = ctx;
-  const labelWidth = getMaxTextWidth(c, data.map(d => d.label), '600 11px Inter, sans-serif');
+  const labelFontSize = getChartLabelFontSize();
+  const valueFontSize = getChartValueFontSize();
+  const labelWidth = getMaxTextWidth(c, data.map(d => d.label), `600 ${labelFontSize}px Inter, sans-serif`);
   const basePad = {
     left: Math.ceil(labelWidth) + 18,
     right: hideValues ? 12 : 42,
@@ -2785,14 +2803,14 @@ function drawLollipop(data, w, h, axis, hideValues, progress){
     state.hitRegions.push({idx:d.idx, type:'circle', x:x, y:cy, r:10});
 
     c.fillStyle = '#111827';
-    c.font = '600 11px Inter, sans-serif';
+    c.font = `600 ${labelFontSize}px Inter, sans-serif`;
     c.textAlign = 'right';
-    c.fillText(d.label, pad.left - 8, cy + 4);
+    c.fillText(d.label, pad.left - 8, cy + labelFontSize * .34);
 
     if(!hideValues && progress > 0.92){
       c.textAlign = 'left';
-      c.font = '700 11px Inter, sans-serif';
-      c.fillText(fmt(d.rawValue), Math.min(x + 12, w - 34), cy + 4);
+      c.font = `700 ${valueFontSize}px Inter, sans-serif`;
+      c.fillText(fmt(d.rawValue), Math.min(x + 12, w - 34), cy + valueFontSize * .34);
     }
   });
 
@@ -2848,7 +2866,7 @@ function drawDonut(data, w, h, progress){
 
   if(!hideValues && progress > 0.92){
     c.fillStyle = '#111827';
-    c.font = '800 24px Inter, sans-serif';
+    c.font = `800 ${Math.max(getChartValueFontSize(), Math.round(getChartValueFontSize() * 2.4))}px Inter, sans-serif`;
     c.textAlign = 'center';
     c.fillText($('normalize100').checked ? '100' : fmt(data.reduce((sum, d) => sum + d.rawValue, 0)), cx, cy + 4);
   }
@@ -2867,13 +2885,13 @@ function drawBarRace(dataset, w, h, progress){
 
   const hideValues = $('hideValues').checked;
   const showPhotos = shouldShowBarRacePhotos();
-  const photoLabels = showPhotos ? data.filter(d => getItemImageSrc(d.idx)).map(d => d.label) : [];
-  const labelWidth = getMaxTextWidth(c, photoLabels, '700 12px Inter, sans-serif');
+  const labelFontSize = getChartLabelFontSize();
+  const valueFontSize = getChartValueFontSize();
   const photoReserve = showPhotos ? 54 : 0;
   const basePad = {
     left: photoReserve + 20,
     right: hideValues ? 18 : 52,
-    top: 32,
+    top: Math.max(32, labelFontSize + valueFontSize + 12),
     bottom: 12
   };
   const legendReserve = getLegendReserve(c, data, basePad, w, h);
@@ -2888,13 +2906,13 @@ function drawBarRace(dataset, w, h, progress){
   const axis = getAxisConfigFromValues(values);
   const range = (axis.max - axis.min) || 1;
   const visibleSlots = Math.max(1, frame.visibleSlots || data.length);
-  const row = Math.max(34, h - pad.top - pad.bottom) / visibleSlots;
+  const row = Math.max(labelFontSize + valueFontSize + 28, h - pad.top - pad.bottom) / visibleSlots;
   const radius = Math.max(0, +$('barRadius').value || 0);
 
   c.fillStyle = '#667085';
-  c.font = '700 11px Inter, sans-serif';
+  c.font = `700 ${valueFontSize}px Inter, sans-serif`;
   c.textAlign = 'right';
-  c.fillText(frame.frameLabel, w - pad.right, 18);
+  c.fillText(frame.frameLabel, w - pad.right, Math.max(valueFontSize, 18));
 
   data.forEach(d => {
     const color = itemColor(d.colorKey ?? d.idx);
@@ -2918,13 +2936,13 @@ function drawBarRace(dataset, w, h, progress){
     c.fill();
 
     c.fillStyle = '#111827';
-    c.font = '700 12px Inter, sans-serif';
+    c.font = `700 ${labelFontSize}px Inter, sans-serif`;
     c.textAlign = 'left';
     c.fillText(d.label, barX, y - 6);
 
     c.fillStyle = '#667085';
-    c.font = '600 10px Inter, sans-serif';
-    c.fillText(formatRankLabel(d.rankPos), barX, y - 18);
+    c.font = `600 ${valueFontSize}px Inter, sans-serif`;
+    c.fillText(formatRankLabel(d.rankPos), barX, y - labelFontSize - 9);
 
     if(hasPhoto){
       const img = getItemPhotoImage(d.idx);
@@ -2934,9 +2952,9 @@ function drawBarRace(dataset, w, h, progress){
 
     if(!hideValues){
       c.fillStyle = '#111827';
-      c.font = '700 12px Inter, sans-serif';
+      c.font = `700 ${valueFontSize}px Inter, sans-serif`;
       c.textAlign = 'left';
-      c.fillText(fmt(d.rawValue), Math.min(barX + bw + 8, w - 34), y + bh * .6);
+      c.fillText(fmt(d.rawValue), Math.min(barX + bw + 8, w - Math.max(34, valueFontSize * 2)), y + bh * .6);
     }
 
     if(state.selectedItems.has(d.idx)) drawSelectionOutlineRect(c, barX, y, bw, bh);
@@ -3054,8 +3072,10 @@ function drawLineRace(dataset, w, h, progress){
         const photoRadius = showPhoto ? Math.max(10, Math.min(18, lineWidth * 5)) : 0;
         const photoGap = showPhoto ? 8 : 0;
         const labelGap = 10;
-        const labelFont = '700 11px Inter, sans-serif';
-        const rankFont = '600 10px Inter, sans-serif';
+        const labelFontSize = getChartLabelFontSize();
+        const valueFontSize = getChartValueFontSize();
+        const labelFont = `700 ${labelFontSize}px Inter, sans-serif`;
+        const rankFont = `600 ${valueFontSize}px Inter, sans-serif`;
         c.font = labelFont;
         const labelWidth = c.measureText(series.label).width;
         const totalWidth = (showPhoto ? photoRadius * 2 + photoGap : 0) + labelWidth;
@@ -3076,7 +3096,7 @@ function drawLineRace(dataset, w, h, progress){
 
         c.fillStyle = '#667085';
         c.font = rankFont;
-        c.fillText(formatRankLabel(p.plotValue), textX, p.y - 9);
+        c.fillText(formatRankLabel(p.plotValue), textX, p.y - Math.max(9, getChartValueFontSize()));
       }
     });
   });
@@ -3126,12 +3146,14 @@ function drawTreemap(data, w, h, progress){
 
     if(progress > 0.55){
       c.fillStyle = '#ffffff';
-      c.font = '700 11px Inter, sans-serif';
+      const labelFontSize = getChartLabelFontSize();
+      const valueFontSize = getChartValueFontSize();
+      c.font = `700 ${labelFontSize}px Inter, sans-serif`;
       c.textAlign = 'left';
-      c.fillText(item.label, rx + 8, ry + 16);
+      c.fillText(item.label, rx + 8, ry + labelFontSize + 5);
       if(!hideValues && rw > 60 && rh > 40){
-        c.font = '600 10px Inter, sans-serif';
-        c.fillText(fmt(item.rawValue), rx + 8, ry + 30);
+        c.font = `600 ${valueFontSize}px Inter, sans-serif`;
+        c.fillText(fmt(item.rawValue), rx + 8, ry + labelFontSize + valueFontSize + 10);
       }
     }
   });
@@ -3180,9 +3202,10 @@ function drawRadar(data, w, h, progress){
     c.stroke();
 
     c.fillStyle = '#667085';
-    c.font = '10px Inter, sans-serif';
+    const labelFontSize = getChartLabelFontSize();
+    c.font = `${labelFontSize}px Inter, sans-serif`;
     c.textAlign = Math.cos(a) > 0.2 ? 'left' : (Math.cos(a) < -0.2 ? 'right' : 'center');
-    c.fillText(d.label, cx + Math.cos(a) * (radius + 14), cy + Math.sin(a) * (radius + 14));
+    c.fillText(d.label, cx + Math.cos(a) * (radius + labelFontSize + 4), cy + Math.sin(a) * (radius + labelFontSize + 4));
   });
 
   c.beginPath();
@@ -3210,9 +3233,9 @@ function drawRadar(data, w, h, progress){
     if(state.selectedItems.has(data[i].idx)) drawSelectionOutlineCircle(c, p.x, p.y, Math.max(4, +$('areaLineWidth').value || 3));
     if(!hideValues && progress > 0.92){
       c.fillStyle = '#111827';
-      c.font = '700 10px Inter, sans-serif';
+      c.font = `700 ${getChartValueFontSize()}px Inter, sans-serif`;
       c.textAlign = 'center';
-      c.fillText(fmt(data[i].rawValue), p.x, p.y - 10);
+      c.fillText(fmt(data[i].rawValue), p.x, p.y - Math.max(10, getChartValueFontSize()));
     }
   });
 
@@ -3368,6 +3391,8 @@ function buildChartConfig(){
       showY: $('showY').checked,
       xAxisFontSize: $('xAxisFontSize').value,
       yAxisFontSize: $('yAxisFontSize').value,
+      chartLabelFontSize: $('chartLabelFontSize').value,
+      chartValueFontSize: $('chartValueFontSize').value,
       formatDates: $('formatDates').checked,
       dateFormat: $('dateFormat').value,
       xTitle: $('xTitle').value,
@@ -3779,7 +3804,7 @@ $('csvFile').addEventListener('change', e => {
   });
 });
 
-['hideValues','showX','showY','xAxisFontSize','yAxisFontSize','formatDates','dateFormat','xTitle','xLabelsMode','xCustomLabels','xRotation','xLimit','yTitle','yCustomTicks','refXOn','refXValue','refYOn','refYValue','refLineColor','refLineWidth','lockY','yMin','yMax','yStep','globalColor','normalize100','barLabelGap','barRadius','hideLinePoints','smoothCurves','areaColor','areaLineWidth','areaFillOpacity','areaLineOpacity','showLegend','legendDirection','legendAlign','legendHorizontalPos','legendVerticalPos','enableAnimation','animSpeed','showBarRacePhotos','showLineRacePhotos']
+['hideValues','showX','showY','xAxisFontSize','yAxisFontSize','chartLabelFontSize','chartValueFontSize','formatDates','dateFormat','xTitle','xLabelsMode','xCustomLabels','xRotation','xLimit','yTitle','yCustomTicks','refXOn','refXValue','refYOn','refYValue','refLineColor','refLineWidth','lockY','yMin','yMax','yStep','globalColor','normalize100','barLabelGap','barRadius','hideLinePoints','smoothCurves','areaColor','areaLineWidth','areaFillOpacity','areaLineOpacity','showLegend','legendDirection','legendAlign','legendHorizontalPos','legendVerticalPos','enableAnimation','animSpeed','showBarRacePhotos','showLineRacePhotos']
 .forEach(id => $(id).addEventListener('input', () => {
   if(id === 'xLabelsMode'){
     updateXCustomVisibility();
