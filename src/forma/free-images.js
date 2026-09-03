@@ -50,6 +50,7 @@ const FIXED_IMAGE_HOSTS=new Set([
   'live.staticflickr.com','cdn.loc.gov','images.metmuseum.org','imagens.ebc.com.br','agenciabrasil.ebc.com.br'
 ]);
 const IMAGE_HOST_SUFFIXES=['.ebc.com.br','.agenciabrasil.ebc.com.br','.staticflickr.com','.si.edu','.loc.gov','.wikimedia.org','.wordpress.com'];
+const RESOLVABLE_SOURCE_HOSTS=new Set(['agenciabrasil.ebc.com.br','www.fotospublicas.com','fotospublicas.com']);
 function safeImageTarget(value){
   try{
     const url=new URL(String(value||''));
@@ -59,7 +60,15 @@ function safeImageTarget(value){
     return url;
   }catch{return null;}
 }
+function safeSourcePage(value){
+  try{
+    const url=new URL(String(value||''));
+    if(url.protocol!=='https:'||!RESOLVABLE_SOURCE_HOSTS.has(url.hostname.toLowerCase()))return null;
+    return url;
+  }catch{return null;}
+}
 function proxyFor(value){const safe=safeImageTarget(value);return safe?`/api/free-images/file?url=${encodeURIComponent(safe.toString())}`:'';}
+
 function resultBase(input){
   const thumbnailUrl=String(input.thumbnailUrl||input.thumbUrl||input.url||input.originalUrl||'');
   const assetUrl=String(input.assetUrl||input.originalUrl||input.url||thumbnailUrl||'');
@@ -77,14 +86,15 @@ function resultBase(input){
     license:clean(input.license||'',180),licenseUrl:String(input.licenseUrl||''),usage:clean(input.usage||'',220),
     rightsStatus:input.rightsStatus||'review',reviewBeforeUse:input.reviewBeforeUse!==false,
     autoUseAllowed:!!input.autoUseAllowed,insertable:!!(assetProxyUrl||thumbnailProxyUrl),
-    factual:!!input.factual,score:Number(input.score)||0,downloadLocation:input.downloadLocation||''
+    factual:!!input.factual,score:Number(input.score)||0,downloadLocation:input.downloadLocation||'',
+    resolvable:!!safeSourcePage(input.pageUrl||'')
   };
 }
 
 async function fetchText(url,options={}){
   const controller=new AbortController();const timer=setTimeout(()=>controller.abort(),Math.max(1500,Number(options.timeout)||6500));
   try{
-    const res=await fetch(url,{headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'FORMA-DESIGN/0.9.7.5.46 editorial-image-search',...(options.headers||{})},redirect:'follow',signal:controller.signal});
+    const res=await fetch(url,{headers:{Accept:'text/html,application/xhtml+xml','User-Agent':'FORMA-DESIGN/0.9.7.5.47 editorial-image-search',...(options.headers||{})},redirect:'follow',signal:controller.signal});
     if(!res.ok)throw new Error(`HTTP ${res.status}`);return await res.text();
   }finally{clearTimeout(timer);}
 }
@@ -141,7 +151,7 @@ function metaValue(meta,key){return clean(meta?.[key]?.value||'',1400);}
 function acceptedCommonsLicense(value){const license=String(value||'').toLowerCase();return license.includes('cc0')||license.includes('public domain')||license.includes('domínio público')||license.includes('cc by')||license.includes('cc-by')||license.includes('creative commons attribution');}
 async function commonsSearch(query,limit=10){
   const qs=new URLSearchParams({action:'query',format:'json',formatversion:'2',origin:'*',generator:'search',gsrsearch:query,gsrnamespace:'6',gsrlimit:String(clampLimit(limit,10)),prop:'imageinfo',iiprop:'url|mime|extmetadata',iiurlwidth:'1000'});
-  const response=await fetch(`${COMMONS_API}?${qs}`,{headers:{Accept:'application/json','Api-User-Agent':'FormaOne/0.9.7.5.46 editorial free image search'}});if(!response.ok)throw new Error(`Wikimedia Commons HTTP ${response.status}`);
+  const response=await fetch(`${COMMONS_API}?${qs}`,{headers:{Accept:'application/json','Api-User-Agent':'FormaOne/0.9.7.5.47 editorial free image search'}});if(!response.ok)throw new Error(`Wikimedia Commons HTTP ${response.status}`);
   const data=await response.json(),pages=Array.isArray(data?.query?.pages)?data.query.pages:[],results=[];
   for(const page of pages){const info=page?.imageinfo?.[0];if(!info||!/^image\/(jpeg|png|webp)$/i.test(String(info.mime||'')))continue;const meta=info.extmetadata||{};const license=clean(metaValue(meta,'LicenseShortName')||metaValue(meta,'UsageTerms')||'Licença não informada',140);if(!acceptedCommonsLicense(license))continue;const original=safeImageTarget(info.url),thumb=safeImageTarget(info.thumburl||info.url);if(!original||!thumb)continue;const artist=metaValue(meta,'Artist')||metaValue(meta,'Credit');const credit=metaValue(meta,'Credit');const pageUrl=`https://commons.wikimedia.org/wiki/${encodeURIComponent(String(page.title||'').replace(/ /g,'_'))}`;const item=resultBase({id:page.pageid||page.title,title:String(page.title||'').replace(/^File:/i,''),description:metaValue(meta,'ImageDescription'),url:thumb.toString(),thumbnailUrl:thumb.toString(),assetUrl:original.toString(),originalUrl:original.toString(),pageUrl,source:'Wikimedia Commons',provider:'wikimedia',author:artist,credit,attribution:[artist||credit,license].filter(Boolean).join(' · '),license,licenseUrl:metaValue(meta,'LicenseUrl'),rightsStatus:'open-license',reviewBeforeUse:true,autoUseAllowed:true});item.score=70+relevancy(query,item);results.push(item);}
   return results;
@@ -180,6 +190,50 @@ async function unifiedSearch(query,limit,providers,env){
   const ranked=dedupe(items).sort((a,b)=>(b.score||0)-(a.score||0));return {results:ranked.slice(0,limit),statuses};
 }
 
+function metaContent(html,key){
+  const wanted=String(key||'').toLowerCase();
+  const tags=String(html||'').match(/<meta\b[^>]*>/gi)||[];
+  for(const tag of tags){
+    const name=String(attr(tag,'property')||attr(tag,'name')||'').toLowerCase();
+    if(name!==wanted)continue;
+    const content=attr(tag,'content');
+    if(content)return clean(content,2000);
+  }
+  return '';
+}
+
+function sourceImageCandidates(html,base){
+  const candidates=[];
+  const add=(value,priority=0,label='')=>{const absolute=absUrl(value,base);const safe=safeImageTarget(absolute);if(!safe)return;candidates.push({url:safe.toString(),priority,label});};
+  add(metaContent(html,'og:image'),95,'og:image');
+  add(metaContent(html,'twitter:image'),90,'twitter:image');
+  const anchorRe=/<a\b[^>]*href=[\"']([^\"']+)[\"'][^>]*>([\s\S]*?)<\/a>/gi;let match;
+  while((match=anchorRe.exec(String(html||'')))){
+    const label=clean(match[2],120);const href=match[1];
+    if(/download\s*web/i.test(label))add(href,130,'download-web');
+    else if(/download\s*original/i.test(label))add(href,125,'download-original');
+    else if(/^download$/i.test(label))add(href,115,'download');
+    else if(/\.(?:jpe?g|png|webp|avif)(?:[?#]|$)/i.test(href))add(href,75,'linked-image');
+  }
+  const imageRe=/<img\b[^>]*>/gi;let imageMatch;
+  while((imageMatch=imageRe.exec(String(html||'')))){
+    const tag=imageMatch[0],src=firstSrcFromImg(tag);if(!src)continue;
+    const alt=clean(attr(tag,'alt'),180);const noisy=/logo|icon|avatar|calend[aá]rio|foto\s*$/i.test(alt);
+    add(src,noisy?20:65,'img');
+  }
+  const seen=new Set();return candidates.sort((a,b)=>b.priority-a.priority).filter(item=>{if(seen.has(item.url))return false;seen.add(item.url);return true;});
+}
+
+async function resolveSourcePage(request){
+  const requestUrl=new URL(request.url),page=safeSourcePage(requestUrl.searchParams.get('page'));if(!page)return json({ok:false,error:'Fonte não permitida para resolução direta'},400);
+  try{
+    const html=await fetchText(page.toString(),{timeout:8000});const candidates=sourceImageCandidates(html,page.toString());
+    if(!candidates.length)return json({ok:false,error:'A fonte não expôs uma imagem direta utilizável'},404);
+    const preferred=candidates[0],thumbnail=candidates.find(item=>item.label==='og:image'||item.label==='twitter:image')||preferred;
+    return json({ok:true,pageUrl:page.toString(),assetUrl:preferred.url,assetProxyUrl:proxyFor(preferred.url),thumbnailUrl:thumbnail.url,thumbnailProxyUrl:proxyFor(thumbnail.url),resolvedBy:preferred.label,candidates:candidates.slice(0,5).map(item=>({url:item.url,proxyUrl:proxyFor(item.url),label:item.label}))},200,{'Cache-Control':'public, max-age=21600'});
+  }catch(error){return json({ok:false,error:error instanceof Error?error.message:String(error)},502);}
+}
+
 function inferredImageType(url,type=''){
   const raw=String(type||'').toLowerCase().split(';')[0].trim();
   if(/^image\/(jpeg|jpg|png|webp|avif|gif)$/i.test(raw))return raw==='image/jpg'?'image/jpeg':raw;
@@ -194,7 +248,7 @@ function inferredImageType(url,type=''){
 
 async function proxyImage(request){
   const url=new URL(request.url),target=safeImageTarget(url.searchParams.get('url'));if(!target)return json({ok:false,error:'Imagem não permitida pelo proxy seguro'},400);
-  const response=await fetch(target.toString(),{headers:{Accept:'image/avif,image/webp,image/png,image/jpeg,image/jpg,image/gif,image/*;q=0.8,*/*;q=0.2','User-Agent':'FORMA-DESIGN/0.9.7.5.46 editorial image proxy'}});if(!response.ok)return json({ok:false,error:`Imagem indisponível: HTTP ${response.status}`},502);const type=inferredImageType(target,response.headers.get('content-type')||'');if(!type)return json({ok:false,error:'Formato de imagem não permitido'},415);return new Response(response.body,{status:200,headers:{'Content-Type':type,'Cache-Control':'public, max-age=21600','X-Content-Type-Options':'nosniff','Access-Control-Allow-Origin':'*'}});
+  const response=await fetch(target.toString(),{headers:{Accept:'image/avif,image/webp,image/png,image/jpeg,image/jpg,image/gif,image/*;q=0.8,*/*;q=0.2','User-Agent':'FORMA-DESIGN/0.9.7.5.47 editorial image proxy'}});if(!response.ok)return json({ok:false,error:`Imagem indisponível: HTTP ${response.status}`},502);const type=inferredImageType(target,response.headers.get('content-type')||'');if(!type)return json({ok:false,error:'Formato de imagem não permitido'},415);return new Response(response.body,{status:200,headers:{'Content-Type':type,'Cache-Control':'public, max-age=21600','X-Content-Type-Options':'nosniff','Access-Control-Allow-Origin':'*'}});
 }
 
 async function trackUnsplash(request,env){
@@ -203,6 +257,7 @@ async function trackUnsplash(request,env){
 
 export async function handleFreeImagesApi(request,env={}){
   const url=new URL(request.url);
+  if(url.pathname==='/api/free-images/resolve'&&request.method==='GET')return resolveSourcePage(request);
   if(url.pathname==='/api/free-images/file'&&request.method==='GET')return proxyImage(request);
   if(url.pathname==='/api/free-images/track/unsplash'&&request.method==='POST')return trackUnsplash(request,env);
   if(url.pathname!=='/api/free-images'||request.method!=='GET')return json({ok:false,error:'Endpoint do banco de imagens não encontrado'},404);

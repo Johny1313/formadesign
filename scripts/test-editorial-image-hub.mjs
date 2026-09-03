@@ -19,7 +19,7 @@ const checks=[
  ['UI exposes Agência Brasil filter', ui.includes('<option value="agencia-brasil">Agência Brasil · Foto Agência</option>')],
  ['UI exposes Fotos Públicas filter', ui.includes('<option value="fotos-publicas">Fotos Públicas</option>')],
  ['UI exposes Openverse filter', ui.includes('<option value="openverse">Openverse</option>')],
- ['UI preserves source and rights metadata', ui.includes('sourceRightsStatus:item.rightsStatus')],
+ ['UI preserves source and rights metadata', ui.includes('sourceRightsStatus:working.rightsStatus') || ui.includes('sourceRightsStatus:item.rightsStatus')],
  ['UI uses dedicated thumbnail preview helper', ui.includes('function freeBankPreviewSrc(item)')],
  ['AI remains fallback in UI', ui.includes('Imagem por IA · fallback')]
 ];

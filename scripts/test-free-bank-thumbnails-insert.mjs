@@ -4,13 +4,16 @@ const ui=fs.readFileSync(new URL('../public/design/index.html',import.meta.url),
 const checks=[
  ['Backend stores thumbnail proxy URL', backend.includes('const thumbnailProxyUrl=proxyFor(thumbnailUrl);')],
  ['Backend stores asset proxy URL', backend.includes('const assetProxyUrl=proxyFor(assetUrl);')],
- ['Proxy accepts image jpg alias', backend.includes("raw==='image/jpg'?'image/jpeg':raw")],
- ['Proxy can infer image type from file extension', backend.includes("path.endsWith('.jpg')||path.endsWith('.jpeg')")],
- ['UI builds preview source from thumbnail first', ui.includes('return item?.thumbnailProxyUrl||item?.proxyUrl||item?.thumbnailUrl')],
+ ['Dedicated source resolver endpoint exists', backend.includes("'/api/free-images/resolve'")],
+ ['Resolver reads og image metadata', backend.includes("metaContent(html,'og:image')")],
+ ['Resolver prioritizes download web link', backend.includes("download\\s*web") || backend.includes('download\s*web')],
+ ['Resolver only accepts known editorial source hosts', backend.includes('RESOLVABLE_SOURCE_HOSTS')],
+ ['UI resolves editorial source pages', ui.includes('async function freeBankResolveItem(item)')],
  ['UI builds insertion source fallback chain', ui.includes('function freeBankInsertSources(item)')],
  ['UI fetches image through multiple candidates', ui.includes('for(const src of candidates)')],
- ['UI renders image thumbnail with fallback placeholder', ui.includes('Miniatura indisponível nesta fonte')],
- ['UI use button availability depends on insertion sources', ui.includes('const canUse=item.insertable!==false&&freeBankInsertSources(item).length>0')]
+ ['UI resolves thumbnail when initial preview fails', ui.includes('resolvePreview();')],
+ ['Use no longer opens source page automatically', (()=>{const a=ui.indexOf('async function freeBankUse(item)');const b=ui.indexOf('function freeBankProviderBadge(item)');return a>=0&&b>a&&!ui.slice(a,b).includes('window.open(');})()],
+ ['Source remains a separate button', ui.includes("sourceBtn.onclick=()=>window.open(item.pageUrl,'_blank','noopener,noreferrer')")]
 ];
 let failed=0;for(const [name,ok] of checks){console.log(`${ok?'PASS':'FAIL'} | ${name}`);if(!ok)failed++;}
 if(failed)process.exit(1);console.log('FREE_BANK_THUMBNAILS_INSERT_TEST: PASS');
