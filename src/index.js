@@ -4,6 +4,7 @@ import { handleFreeImagesApi } from './forma/free-images.js';
 import { handleAssetProxyApi } from './forma/asset-proxy.js';
 import { handleProjectsApi } from './projects/service.js';
 import { handleLibraryApi } from './library/service.js';
+import { handleFormaProductionApi } from './production/service.js';
 
 function json(data,status=200){
   return Response.json(data,{status,headers:{
@@ -109,13 +110,14 @@ export default {
       return json({
         ok:true,
         product:'FORMA DESIGN',
-        version:'0.9.7.5.49',
+        version:'0.9.7.5.50',
         chartStudio:true,
         giphy:true,
         removeBg:true,removeBgMode:env.REMOVEBG_API_KEY?'environment':'bundled-fallback',
         workersAi:!!env.AI,
         projects:!!env.DB,
-        sharedLibrary:!!env.DB
+        sharedLibrary:!!env.DB,
+        productionEngine:{phase:'coordinator',jobs:!!env.DB,reader:false,evidence:false,carousel:false}
       });
     }
 
@@ -128,6 +130,7 @@ export default {
     if(url.pathname==='/api/remove-bg') return handleSecureRemoveBg(request,env);
     if(url.pathname.startsWith('/api/projects')) return handleProjectsApi(request,env);
     if(url.pathname.startsWith('/api/library')) return handleLibraryApi(request,env);
+    if(url.pathname.startsWith('/api/forma/production/')) return handleFormaProductionApi(request,env);
     if(url.pathname==='/api/production/image') return productionImage(request,env);
 
     if(
@@ -145,7 +148,7 @@ export default {
     if(url.pathname.startsWith('/design/')){
       const headers=new Headers(assetResponse.headers);
       headers.set('Cache-Control','no-store, max-age=0');
-      headers.set('X-Forma-Version','0.9.7.5.49');
+      headers.set('X-Forma-Version','0.9.7.5.50');
       return new Response(assetResponse.body,{status:assetResponse.status,statusText:assetResponse.statusText,headers});
     }
     return assetResponse;

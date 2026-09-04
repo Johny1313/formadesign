@@ -1,4 +1,4 @@
-# FORMA DESIGN 0.9.7.5.49
+# FORMA DESIGN 0.9.7.5.50
 
 Projeto independente do editor FORMA DESIGN.
 
@@ -97,6 +97,19 @@ A exclusão múltipla também é suportada. Campos de texto, inputs e edição i
 - O elemento pode ser selecionado novamente e reaberto no Chart Studio para nova edição.
 
 
+## Production Engine · Fase 1 — v0.9.7.5.50
+
+Baseline protegida: **FORMA DESIGN v0.9.7.5.49**. Esta etapa adiciona somente o Production Coordinator: `ProductionInput` para URL/texto/pauta, jobs persistentes no D1, estados, progresso, retry no mesmo job, cancelamento e histórico recente. Reader, Evidence, tradução e Carousel AI ainda não foram ativados nesta fase; entram nas etapas seguintes para evitar regressão ampla.
+
+API nova e exclusiva do FORMA:
+- `POST /api/forma/production/jobs`
+- `GET /api/forma/production/jobs`
+- `GET /api/forma/production/jobs/:id`
+- `POST /api/forma/production/jobs/:id/retry`
+- `POST /api/forma/production/jobs/:id/cancel`
+
+O schema D1 `forma_design_production_jobs` é criado de forma aditiva (`CREATE TABLE IF NOT EXISTS`) e não altera Projects, Library, Canvas ou outras tabelas existentes.
+
 ## Remove BG — v0.9.7.5.49
 
 - Corrigido para imagens locais, externas, GIPHY e assets via proxy.
@@ -107,13 +120,13 @@ A exclusão múltipla também é suportada. Campos de texto, inputs e edição i
 - Mensagens de erro preservam o motivo retornado pela API.
 
 
-## Deploy verification — v0.9.7.5.49
+## Deploy verification — v0.9.7.5.50
 
 After `npm install` and `npm run deploy`, verify:
 
-- `/api/health` returns `version: 0.9.7.5.49`.
-- `/design/` shows `0.9.7.5.49` in the top bar.
-- responses under `/design/` include `X-Forma-Version: 0.9.7.5.49` and `Cache-Control: no-store`.
+- `/api/health` returns `version: 0.9.7.5.50`.
+- `/design/` shows `0.9.7.5.50` in the top bar.
+- responses under `/design/` include `X-Forma-Version: 0.9.7.5.50` and `Cache-Control: no-store`.
 - Chart Studio PNG export keeps transparent pixels outside the chart.
 - Forma > Shapes > Line is stroke-only, with no fill controls and 0.25px increments.
 
