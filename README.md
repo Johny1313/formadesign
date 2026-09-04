@@ -1,4 +1,4 @@
-# FORMA DESIGN 0.9.7.5.50.1
+# FORMA DESIGN 0.9.7.5.50.2
 
 Projeto independente do editor FORMA DESIGN.
 
@@ -97,7 +97,7 @@ A exclusão múltipla também é suportada. Campos de texto, inputs e edição i
 - O elemento pode ser selecionado novamente e reaberto no Chart Studio para nova edição.
 
 
-## Production Engine · Fase 1 — v0.9.7.5.50.1
+## Production Engine · Fase 1 — v0.9.7.5.50.2
 
 Baseline protegida: **FORMA DESIGN v0.9.7.5.49**. Esta etapa adiciona somente o Production Coordinator: `ProductionInput` para URL/texto/pauta, jobs persistentes no D1, estados, progresso, retry no mesmo job, cancelamento e histórico recente. Reader, Evidence, tradução e Carousel AI ainda não foram ativados nesta fase; entram nas etapas seguintes para evitar regressão ampla.
 
@@ -120,13 +120,13 @@ O schema D1 `forma_design_production_jobs` é criado de forma aditiva (`CREATE T
 - Mensagens de erro preservam o motivo retornado pela API.
 
 
-## Deploy verification — v0.9.7.5.50.1
+## Deploy verification — v0.9.7.5.50.2
 
 After `npm install` and `npm run deploy`, verify:
 
-- `/api/health` returns `version: 0.9.7.5.50.1`.
-- `/design/` shows `0.9.7.5.50.1` in the top bar.
-- responses under `/design/` include `X-Forma-Version: 0.9.7.5.50.1` and `Cache-Control: no-store`.
+- `/api/health` returns `version: 0.9.7.5.50.2`.
+- `/design/` shows `0.9.7.5.50.2` in the top bar.
+- responses under `/design/` include `X-Forma-Version: 0.9.7.5.50.2` and `Cache-Control: no-store`.
 - Chart Studio PNG export keeps transparent pixels outside the chart.
 - Forma > Shapes > Line is stroke-only, with no fill controls and 0.25px increments.
 
@@ -292,11 +292,11 @@ Sem esses secrets, Pexels e Unsplash não são acionados. Agência Brasil, Fotos
 - Suporta preenchimento habilitado/desabilitado, cor, stroke, espessura e stroke contínuo/pontilhado.
 - Os pontos são salvos de forma normalizada, preservando a geometria quando a forma é redimensionada.
 
-## Hotfix Production Engine funcional — v0.9.7.5.50.1
+## Hotfix Production Engine funcional — v0.9.7.5.50.2
 
 A v0.9.7.5.50 criava e persistia jobs, mas não possuía um consumidor que executasse o pipeline. O job permanecia em `queued/source` e não produzia slides.
 
-A v0.9.7.5.50.1 corrige esse contrato:
+A v0.9.7.5.50.2 corrige esse contrato:
 
 - `POST /api/forma/production/jobs` cria o job e agenda `processProductionJob()` via `ctx.waitUntil()`;
 - Direct Reader HTTP lê URLs públicas acessíveis sem Browser Rendering;
@@ -310,3 +310,14 @@ A v0.9.7.5.50.1 corrige esse contrato:
 - Retry reutiliza o mesmo job e, quando a Evidence já está persistida, retoma em `generating` sem reler a entrada.
 
 Esta etapa ainda NÃO inclui Browser Reader nem External Link Recovery. URLs que dependem exclusivamente de JavaScript, captcha, paywall ou bloqueiam fetch HTTP podem retornar diagnóstico de leitura e serão tratadas nas próximas etapas do Production Engine.
+
+## Hotfix 0.9.7.5.50.2 — Production UI Wiring + Runtime Fallback
+
+- Corrige regressão de escopo: o wiring da aba Produção havia sido inserido dentro de `newColorTemplate()`, então o botão `Produzir carrossel` não recebia `onclick` no carregamento normal.
+- O bloco de Produção agora inicializa no escopo principal do editor.
+- Adiciona diagnóstico visível de `/api/health` no painel Produção.
+- Adiciona `/api/forma/production/run` para execução stateless quando D1 não estiver disponível.
+- `POST /api/forma/production/jobs` também funciona em modo stateless quando não existe binding D1.
+- Histórico de resultados stateless é mantido em `localStorage` no navegador.
+- Adicionados `PRODUCTION_UI_WIRING_RUNTIME_TEST` e `PRODUCTION_STATELESS_E2E_TEST`.
+- Baseline `.49` e regressões anteriores permanecem protegidas.

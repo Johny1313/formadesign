@@ -110,14 +110,14 @@ export default {
       return json({
         ok:true,
         product:'FORMA DESIGN',
-        version:'0.9.7.5.50.1',
+        version:'0.9.7.5.50.2',
         chartStudio:true,
         giphy:true,
         removeBg:true,removeBgMode:env.REMOVEBG_API_KEY?'environment':'bundled-fallback',
         workersAi:!!env.AI,
         projects:!!env.DB,
         sharedLibrary:!!env.DB,
-        productionEngine:{phase:'operational-direct',jobs:!!env.DB,reader:true,evidence:true,carousel:true,browserReader:false,externalRecovery:false}
+        productionEngine:{phase:'operational-direct',runtimeHotfix:'50.2',jobs:!!env.DB,stateless:true,runEndpoint:true,reader:true,evidence:true,carousel:true,browserReader:false,externalRecovery:false}
       });
     }
 
@@ -148,7 +148,7 @@ export default {
     if(url.pathname.startsWith('/design/')){
       const headers=new Headers(assetResponse.headers);
       headers.set('Cache-Control','no-store, max-age=0');
-      headers.set('X-Forma-Version','0.9.7.5.50.1');
+      headers.set('X-Forma-Version','0.9.7.5.50.2');
       return new Response(assetResponse.body,{status:assetResponse.status,statusText:assetResponse.statusText,headers});
     }
     return assetResponse;

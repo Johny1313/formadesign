@@ -3,10 +3,10 @@ const ALLOWED_SOURCE_TYPES=new Set(['url','text','topic','project']);
 const ALLOWED_STAGES=new Set(['queued','source','reading','evidence','translation','generating','quality','fallback','ready','failed','cancelled']);
 const TRACKING_KEYS=new Set(['fbclid','gclid','dclid','mc_cid','mc_eid','igshid','ref_src','ref_url','srsltid']);
 const TEXT_MODEL='@cf/zai-org/glm-4.7-flash';
-const ENGINE_BASELINE='forma-production-v1.1';
+const ENGINE_BASELINE='forma-production-v1.2';
 const READER_VERSION='forma-direct-reader-1.0';
 const EVIDENCE_VERSION='forma-evidence-1.0';
-const CAROUSEL_VERSION='forma-carousel-1.0';
+const CAROUSEL_VERSION='forma-carousel-1.1';
 
 function json(data,status=200){return Response.json(data,{status,headers:{'Cache-Control':'no-store','X-Content-Type-Options':'nosniff'}});}
 function clean(value,max=5000){return String(value??'').trim().slice(0,max);}
@@ -106,6 +106,47 @@ async function aiCarousel(env,pack,slideCount){
 function factualGate(slides,pack){const allowed=new Set(pack.facts.map(f=>f.id));const source=compact(`${pack.title} ${pack.articleText}`,200000).toLowerCase();const errors=[];for(const slide of slides){if(!slide.title)errors.push(`slide ${slide.number}: título vazio`);if(!slide.evidenceIds?.length)errors.push(`slide ${slide.number}: sem evidenceIds`);for(const eid of slide.evidenceIds||[]){if(!allowed.has(eid))errors.push(`slide ${slide.number}: ${eid} inexistente`);}const content=`${slide.title} ${slide.subtitle}`;const nums=content.match(/(?:R\$\s*)?\d[\d.,]*%?/g)||[];for(const n of nums){const token=n.toLowerCase().replace(/\s+/g,'');if(token.length>=2&&!source.replace(/\s+/g,'').includes(token))errors.push(`slide ${slide.number}: número não suportado ${n}`);}}return {ok:errors.length===0,errors:errors.slice(0,20)};}
 function qualityGate(slides,slideCount,pack){let score=100;const issues=[];if(slides.length!==slideCount){score-=25;issues.push('quantidade de slides diferente');}const normalized=new Set();for(const slide of slides){if(!slide.title){score-=15;issues.push(`slide ${slide.number} sem título`);}if(slide.title?.length>68){score-=5;issues.push(`slide ${slide.number} título longo`);}if(slide.subtitle?.length>190){score-=5;issues.push(`slide ${slide.number} subtítulo longo`);}const key=compact(`${slide.title} ${slide.subtitle}`,300).toLowerCase();if(normalized.has(key)){score-=12;issues.push(`slide ${slide.number} duplicado`);}normalized.add(key);}const factual=factualGate(slides,pack);if(!factual.ok){score-=Math.min(50,factual.errors.length*12);issues.push(...factual.errors);}return {score:Math.max(0,score),ok:score>=80&&factual.ok,issues,factual};}
 
+
+async function processProductionInput(raw,env={}){
+  const input=normalizeProductionInput(raw);
+  const jobId=id();const ts=now();
+  const title=clean(input.title||(input.sourceType==='url'?new URL(input.url).hostname:input.sourceType==='topic'?input.topic.slice(0,100):input.sourceType==='text'?input.text.slice(0,100):`Projeto ${input.projectId}`),220);
+  let pack=null;let source={title:input.title||'',articleText:'',wordCount:0,readerStrategy:'input',sourceName:'FORMA'};
+  const progress=[];const mark=(stageName,value)=>progress.push({stage:stageName,progress:value,at:now()});
+  try{
+    mark('source',8);
+    if(input.sourceType==='url'){
+      mark('reading',22);source=await directReadUrl(input.url);source.sourceName=new URL(source.readUrl).hostname;
+    }else if(input.sourceType==='text'){
+      mark('reading',22);source={title:input.title||sentenceList(input.text)[0]||'Texto colado',articleText:input.text,wordCount:(input.text.match(/\S+/g)||[]).length,readerStrategy:'input:text',sourceName:'Texto fornecido'};
+    }else if(input.sourceType==='topic'){
+      mark('reading',22);source={title:input.title||input.topic,articleText:input.topic,wordCount:(input.topic.match(/\S+/g)||[]).length,readerStrategy:'input:topic',sourceName:'Pauta fornecida'};
+    }else throw new Error('Regeneração de projeto ainda não está disponível nesta etapa.');
+    mark('evidence',44);pack=evidencePackFromSource(source,input);
+    if(input.sourceType!=='topic'&&(pack.wordCount<55||pack.facts.length<2))throw new Error('INSUFFICIENT_CONTENT');
+    mark('translation',54);pack.translation={status:'not-needed',language:'pt-BR',note:'A tradução dedicada será ampliada em etapa posterior; a geração editorial responde em PT-BR.'};
+    mark('generating',67);
+    const supported=supportedSlideCount(pack,input.slideCount);if(supported<3)throw new Error('A entrada não possui evidência suficiente para um carrossel seguro.');
+    let slides=await aiCarousel(env,pack,supported);let generationMode='ai';
+    if(!slides||slides.length!==supported){slides=deterministicCarousel(pack,supported);generationMode='deterministic-fallback';mark('fallback',78);}
+    mark('quality',88);let quality=qualityGate(slides,supported,pack);
+    if(!quality.ok&&generationMode==='ai'){slides=deterministicCarousel(pack,supported);generationMode='deterministic-fallback';quality=qualityGate(slides,supported,pack);}
+    if(!quality.factual.ok)throw new Error(`FACTUAL_GATE_FAILED: ${quality.factual.errors.join('; ')}`);
+    const result={topicTitle:pack.title||title,slides,evidencePack:pack,facts:pack.facts,reading:{selectedSource:{title:pack.title,sourceName:source.sourceName||'',url:pack.readUrl,images:[]},strategy:source.readerStrategy},verificationLinks:pack.readUrl?[{title:pack.title,sourceName:source.sourceName||'Fonte',url:pack.readUrl,linkRole:'factual-source'}]:[],qualityGate:{score:quality.score,issues:quality.issues},factualGate:quality.factual,confidence:quality.score/100,slideCountRequested:input.slideCount,slideCount:supported,slideCountAdjusted:supported!==input.slideCount,generationMode,translation:pack.translation,versions:{readerVersion:READER_VERSION,evidenceVersion:EVIDENCE_VERSION,carouselPipelineVersion:CAROUSEL_VERSION,engineBaseline:ENGINE_BASELINE}};
+    mark('ready',100);const done=now();
+    return {ok:true,mode:'stateless',job:{id:jobId,sourceType:input.sourceType,title,input,status:'ready',stage:'ready',progress:100,attempt:1,retryCount:0,heartbeat:done,output:{result},error:{},readerStrategy:source.readerStrategy,evidenceCount:pack.facts.length,qualityScore:quality.score,confidence:result.confidence,engineBaseline:ENGINE_BASELINE,createdAt:ts,updatedAt:done,progressLog:progress}};
+  }catch(error){
+    const done=now();return {ok:false,mode:'stateless',job:{id:jobId,sourceType:input.sourceType,title,input,status:'failed',stage:'failed',progress:100,attempt:1,retryCount:0,heartbeat:done,output:pack?{evidencePack:pack}:{},error:{message:String(error?.message||error||'Falha na produção'),stage:pack?'generating':'reading'},readerStrategy:source.readerStrategy||'',evidenceCount:pack?.facts?.length||0,qualityScore:null,confidence:null,engineBaseline:ENGINE_BASELINE,createdAt:ts,updatedAt:done,progressLog:progress}};
+  }
+}
+
+async function runStateless(request,env){
+  const raw=await request.json().catch(()=>({}));
+  let normalized;try{normalized=normalizeProductionInput(raw);}catch(error){return json({ok:false,error:error.message||'Entrada inválida'},400);}
+  const out=await processProductionInput(normalized,env);
+  return json(out,out.ok?200:422);
+}
+
 async function updateJob(env,jobId,fields={}){const keys=Object.keys(fields);if(!keys.length)return;const clauses=[],values=[];for(const key of keys){clauses.push(`${key}=?`);values.push(fields[key]);}values.push(jobId);await env.DB.prepare(`UPDATE ${TABLE} SET ${clauses.join(',')} WHERE id=?`).bind(...values).run();}
 async function jobCancelled(env,jobId){const row=await env.DB.prepare(`SELECT status FROM ${TABLE} WHERE id=?`).bind(jobId).first();return row?.status==='cancelled';}
 async function stage(env,jobId,name,progress,extra={}){if(await jobCancelled(env,jobId))throw Object.assign(new Error('JOB_CANCELLED'),{cancelled:true});const ts=now();await updateJob(env,jobId,{status:'running',stage:name,progress,heartbeat:ts,updated_at:ts,...extra});}
@@ -160,5 +201,20 @@ async function getJob(jobId,env){await ensure(env.DB);const row=await env.DB.pre
 async function retryJob(jobId,request,env,ctx){await ensure(env.DB);const row=await env.DB.prepare(`SELECT * FROM ${TABLE} WHERE id=?`).bind(jobId).first();if(!row)return json({ok:false,error:'Job não encontrado'},404);if(row.status==='cancelled')return json({ok:false,error:'Job cancelado não pode ser retomado.'},409);const body=await request.json().catch(()=>({}));const requestedStage=clean(body.stage,30).toLowerCase();const retryStage=ALLOWED_STAGES.has(requestedStage)&&!['ready','failed','cancelled'].includes(requestedStage)?requestedStage:(row.evidence_count>0?'generating':'source');const ts=now();await env.DB.prepare(`UPDATE ${TABLE} SET status='queued',stage=?,progress=?,attempt=attempt+1,retry_count=retry_count+1,heartbeat=?,error_payload='{}',updated_at=? WHERE id=?`).bind(retryStage,retryStage==='generating'?60:4,ts,ts,jobId).run();scheduleProcess(jobId,env,ctx);return getJob(jobId,env);}
 async function cancelJob(jobId,env){await ensure(env.DB);const row=await env.DB.prepare(`SELECT * FROM ${TABLE} WHERE id=?`).bind(jobId).first();if(!row)return json({ok:false,error:'Job não encontrado'},404);if(row.status==='ready')return json({ok:false,error:'Job concluído não pode ser cancelado.'},409);const ts=now();await env.DB.prepare(`UPDATE ${TABLE} SET status='cancelled',stage='cancelled',progress=100,heartbeat=?,updated_at=? WHERE id=?`).bind(ts,ts,jobId).run();return getJob(jobId,env);}
 
-export async function handleFormaProductionApi(request,env,ctx){if(!env.DB)return json({ok:false,code:'DB_BINDING_REQUIRED',error:'Binding D1 DB não configurado'},503);const url=new URL(request.url);if(url.pathname==='/api/forma/production/jobs'&&request.method==='POST')return createJob(request,env,ctx);if(url.pathname==='/api/forma/production/jobs'&&request.method==='GET')return listJobs(env,url);const match=/^\/api\/forma\/production\/jobs\/([a-f0-9-]{20,80})(?:\/(retry|cancel))?$/i.exec(url.pathname);if(match&&!match[2]&&request.method==='GET')return getJob(match[1],env);if(match&&match[2]==='retry'&&request.method==='POST')return retryJob(match[1],request,env,ctx);if(match&&match[2]==='cancel'&&request.method==='POST')return cancelJob(match[1],env);return json({ok:false,error:'Endpoint não encontrado'},404);}
-export { normalizeProductionInput, normalizeUrl, directReadUrl, extractArticleText, evidencePackFromSource, deterministicCarousel, factualGate, qualityGate, processProductionJob };
+export async function handleFormaProductionApi(request,env,ctx){
+  const url=new URL(request.url);
+  if(url.pathname==='/api/forma/production/run'&&request.method==='POST')return runStateless(request,env);
+  if(!env.DB){
+    if(url.pathname==='/api/forma/production/jobs'&&request.method==='POST')return runStateless(request,env);
+    if(url.pathname==='/api/forma/production/jobs'&&request.method==='GET')return json({ok:true,jobs:[],mode:'stateless',persistence:false});
+    return json({ok:false,code:'STATELESS_MODE',error:'Persistência D1 indisponível neste deploy. Use /api/forma/production/run.'},503);
+  }
+  if(url.pathname==='/api/forma/production/jobs'&&request.method==='POST')return createJob(request,env,ctx);
+  if(url.pathname==='/api/forma/production/jobs'&&request.method==='GET')return listJobs(env,url);
+  const match=/^\/api\/forma\/production\/jobs\/([a-f0-9-]{20,80})(?:\/(retry|cancel))?$/i.exec(url.pathname);
+  if(match&&!match[2]&&request.method==='GET')return getJob(match[1],env);
+  if(match&&match[2]==='retry'&&request.method==='POST')return retryJob(match[1],request,env,ctx);
+  if(match&&match[2]==='cancel'&&request.method==='POST')return cancelJob(match[1],env);
+  return json({ok:false,error:'Endpoint não encontrado'},404);
+}
+export { normalizeProductionInput, normalizeUrl, directReadUrl, extractArticleText, evidencePackFromSource, deterministicCarousel, factualGate, qualityGate, processProductionJob, processProductionInput };
