@@ -9,7 +9,7 @@ const topic=normalizeProductionInput({sourceType:'topic',topic:'Impactos do trab
 const checks=[
  ['Production jobs table exists', backend.includes("const TABLE='forma_design_production_jobs'")],
  ['Production public API create/list exists', backend.includes("url.pathname==='/api/forma/production/jobs'")],
- ['Retry reuses the same job route', backend.includes("/(retry|cancel)") && backend.includes("retryJob(match[1],request,env)")],
+ ['Retry reuses the same job route', backend.includes("/(retry|cancel)") && backend.includes("retryJob(match[1],request,env,ctx)")],
  ['Cancel job route exists', backend.includes("cancelJob(match[1],env)")],
  ['Job model persists heartbeat', backend.includes('heartbeat TEXT NOT NULL')],
  ['Job model persists retry count', backend.includes('retry_count INTEGER NOT NULL DEFAULT 0')],
@@ -20,10 +20,13 @@ const checks=[
  ['Text ProductionInput works', text.sourceType==='text' && text.slideCount===9],
  ['Topic ProductionInput works', topic.sourceType==='topic' && topic.slideCount===6],
  ['Worker routes FORMA production API', index.includes("url.pathname.startsWith('/api/forma/production/')")],
- ['Health exposes Production Engine phase', index.includes("productionEngine:{phase:'coordinator'")],
+ ['Health exposes operational Production Engine phase', index.includes("productionEngine:{phase:'operational-direct'")],
  ['Production tab exists', ui.includes('data-panel="production"') && ui.includes('data-page="production"')],
  ['Production supports URL text and topic', ui.includes('value="url">URL / matéria') && ui.includes('value="text">Texto colado') && ui.includes('value="topic">Pauta digitada')],
  ['Production UI creates FORMA-owned job', ui.includes("formaProductionApi('/api/forma/production/jobs'")],
+ ['Production UI says Produzir carrossel', ui.includes('id="formaProductionCreate" type="button">Produzir carrossel')],
+ ['Production UI polls the real job', ui.includes('async function pollFormaProductionJob(jobId')],
+ ['Production UI can open ready result in editor', ui.includes('function openFormaProductionJob(job)')],
  ['Production UI retries same job', ui.includes("/api/forma/production/jobs/${encodeURIComponent(id)}/retry")],
  ['Production UI exposes stage progress', ui.includes('id="formaProductionStages"')]
 ];

@@ -99,7 +99,7 @@ async function productionImage(request,env){
 }
 
 export default {
-  async fetch(request,env){
+  async fetch(request,env,ctx){
     const url=new URL(request.url);
 
     if(url.pathname==='/'){
@@ -110,14 +110,14 @@ export default {
       return json({
         ok:true,
         product:'FORMA DESIGN',
-        version:'0.9.7.5.50',
+        version:'0.9.7.5.50.1',
         chartStudio:true,
         giphy:true,
         removeBg:true,removeBgMode:env.REMOVEBG_API_KEY?'environment':'bundled-fallback',
         workersAi:!!env.AI,
         projects:!!env.DB,
         sharedLibrary:!!env.DB,
-        productionEngine:{phase:'coordinator',jobs:!!env.DB,reader:false,evidence:false,carousel:false}
+        productionEngine:{phase:'operational-direct',jobs:!!env.DB,reader:true,evidence:true,carousel:true,browserReader:false,externalRecovery:false}
       });
     }
 
@@ -130,7 +130,7 @@ export default {
     if(url.pathname==='/api/remove-bg') return handleSecureRemoveBg(request,env);
     if(url.pathname.startsWith('/api/projects')) return handleProjectsApi(request,env);
     if(url.pathname.startsWith('/api/library')) return handleLibraryApi(request,env);
-    if(url.pathname.startsWith('/api/forma/production/')) return handleFormaProductionApi(request,env);
+    if(url.pathname.startsWith('/api/forma/production/')) return handleFormaProductionApi(request,env,ctx);
     if(url.pathname==='/api/production/image') return productionImage(request,env);
 
     if(
@@ -148,7 +148,7 @@ export default {
     if(url.pathname.startsWith('/design/')){
       const headers=new Headers(assetResponse.headers);
       headers.set('Cache-Control','no-store, max-age=0');
-      headers.set('X-Forma-Version','0.9.7.5.50');
+      headers.set('X-Forma-Version','0.9.7.5.50.1');
       return new Response(assetResponse.body,{status:assetResponse.status,statusText:assetResponse.statusText,headers});
     }
     return assetResponse;
